@@ -1,11 +1,11 @@
 #Run with
-#  docker build -t gopher-flow:1.0 -f Dockerfile.multistage .
+#  docker build -t juliangpurse/gopherflow:1.0.5 -f Dockerfile.multistage .
 
-#- docker run
-# -e GFLOW_DATABASE_TYPE=SQLLITE
-# -e DATABASE_SQLLITE_FILE_NAME=/data/gflow.db
-# -v "$(pwd)/data:/data"
-# gopher-flow:1.0
+ #docker run -p 8080:8080 \
+ #-e GFLOW_DATABASE_TYPE=SQLLITE\
+ #-e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db\
+ #-v "$(pwd):/data"\
+ #juliangpurse/gopherflow:1.0.5
 
 # Build the application from source
 FROM golang:1.25.1 AS build-stage
@@ -17,7 +17,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=1 GOOS=linux go build -o /gopher-flow cmd/github.com/RealZimboGuy/gopherflow/main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -o /gopher-flow cmd/gopherflow/main.go
 
 # Run the tests in the container
 FROM build-stage AS run-test-stage
