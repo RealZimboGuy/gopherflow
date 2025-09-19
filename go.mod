@@ -1,4 +1,4 @@
-module gopherflow
+module github.com/RealZimboGuy/gopherflow
 
 go 1.24.0
 
