@@ -1,4 +1,4 @@
-# GopherFlow
+# GopherFlow (Alpha testing * **use with caution** *)
 
 Small, pragmatic workflow engine for Go with a built-in web console. Define workflows in Go, persist their execution, and observe/operate them via the web UI.
 
