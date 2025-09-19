@@ -29,7 +29,7 @@ This starts the demo application with a SQLite database, there are two workflows
         -e GFLOW_DATABASE_TYPE=SQLLITE\
         -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db\
         -v "$(pwd):/data"\
-        juliangpurse/gopherflow:1.0.5
+        juliangpurse/gopherflow:1.0.6
 
 Access the web console at http://localhost:8080/
 
@@ -41,6 +41,8 @@ Access the web console at http://localhost:8080/
 refer to the example application:  https://github.com/RealZimboGuy/gopherflow-examples
 
 ### Specific details
+
+    go get github.com/RealZimboGuy/gopherflow@v1.0.6
 
 a struct that extends the base 
 ```
