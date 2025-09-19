@@ -1,0 +1,132 @@
+{{ define "create_workflow" }}
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    {{ template "header" . }}
+</head>
+<body class="bg-sky-50 font-sans leading-normal tracking-normal">
+<div class="flex h-screen">
+    <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col">
+        <div class="p-6 text-center font-bold text-lg tracking-wide">
+            <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-cyan-500"></span>
+                GopherFlow
+            </span>
+        </div>
+        {{ template "nav" . }}
+    </aside>
+    <div class="flex flex-col flex-grow overflow-scroll" id="main-content">
+        <header class="bg-white shadow-md py-4 px-6 flex justify-start">
+            <h1 class="text-xl font-semibold text-gray-800">Create Workflow: {{ .WorkflowType }}</h1>
+        </header>
+        <main class="p-6 flex-grow">
+            <section class="bg-white rounded shadow-md p-6 max-w-3xl">
+                <form id="createForm" class="space-y-4">
+                    <input type="hidden" id="workflowType" value="{{ .WorkflowType }}" />
+                    <div>
+                        <label for="externalId" class="block text-sm font-medium text-gray-700">External ID (This must be unique, if duplicate, the workflow is not created again)<span class="text-red-500">*</span></label>
+                        <input id="externalId" type="text" class="mt-1 block w-full border rounded px-3 py-2" required />
+                    </div>
+                    <div>
+                        <label for="executorGroup" class="block text-sm font-medium text-gray-700">Executor Group<span class="text-red-500">*</span></label>
+                        <input id="executorGroup" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="default" value="default" required />
+                        <p class="text-xs text-gray-500 mt-1">Validated on the server to be an existing executor group.</p>
+                    </div>
+                    <div>
+                        <label for="businessKey" class="block text-sm font-medium text-gray-700">Business Key<span class="text-red-500">*</span></label>
+                        <input id="businessKey" type="text" class="mt-1 block w-full border rounded px-3 py-2" required />
+                    </div>
+                    <div>
+                        <label for="stateVars" class="block text-sm font-medium text-gray-700">State Vars (JSON object)</label>
+                        <textarea id="stateVars" rows="6" class="mt-1 block w-full border rounded px-3 py-2" placeholder='{"myVar":"33","engine":"GopherFlow"}'></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Optional. Provide a JSON object. Keys and values are strings.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="nextActivation" class="block text-sm font-medium text-gray-700">Next Activation. (defaults to NOW)</label>
+                            <input id="nextActivation" type="datetime-local" class="mt-1 block w-full border rounded px-3 py-2" />
+                        </div>
+                    </div>
+                    <div id="errorBox" class="hidden p-3 rounded bg-red-100 text-red-700"></div>
+                    <div id="successBox" class="hidden p-3 rounded bg-green-100 text-green-700"></div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700">Create</button>
+                        <a href="/definitions" class="px-4 py-2 rounded border">Cancel</a>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</div>
+<script>
+(function() {
+  const form = document.getElementById('createForm');
+  const errBox = document.getElementById('errorBox');
+  const okBox = document.getElementById('successBox');
+  function show(el, msg){ el.textContent = msg; el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); el.textContent=''; }
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    hide(errBox); hide(okBox);
+    const externalId = document.getElementById('externalId').value.trim();
+    const executorGroup = document.getElementById('executorGroup').value.trim();
+    const businessKey = document.getElementById('businessKey').value.trim();
+    const workflowType = document.getElementById('workflowType').value;
+    const nextActivation = document.getElementById('nextActivation').value;
+    // const nextActivationOffset = document.getElementById('nextActivationOffset').value.trim();
+    let stateVarsObj = undefined;
+    const stateVars = document.getElementById('stateVars').value.trim();
+    if (!externalId || !executorGroup || !businessKey) {
+      show(errBox, 'externalId, executorGroup, and businessKey are required.');
+      return;
+    }
+    if (stateVars) {
+      try {
+        const parsed = JSON.parse(stateVars);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          stateVarsObj = parsed;
+        } else {
+          show(errBox, 'stateVars must be a JSON object.');
+          return;
+        }
+      } catch (e) {
+        show(errBox, 'Invalid JSON in stateVars: ' + e.message);
+        return;
+      }
+    }
+    const payload = { externalId, executorGroup, workflowType, businessKey };
+    if (stateVarsObj) payload.stateVars = stateVarsObj;
+    if (nextActivation) {
+      // Convert to ISO string expected by server's time parsing (RFC3339)
+      const dt = new Date(nextActivation);
+      if (!isNaN(dt.getTime())) payload.nextActivation = dt.toISOString();
+    }
+    // if (nextActivationOffset) payload.nextActivationOffset = nextActivationOffset;
+    try {
+      const resp = await fetch('/api/workflows', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const text = await resp.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch {}
+      if (!resp.ok) {
+        show(errBox, (data && data.error) ? data.error : (text || 'Failed to create workflow'));
+        return;
+      }
+      const id = data && data.id ? data.id : '';
+      if (id) {
+        okBox.innerHTML = 'Workflow created. ID: <a href="/details/' + encodeURIComponent(id) + '" class="underline font-medium text-cyan-800 hover:text-cyan-900">' + id + '</a>';
+        okBox.classList.remove('hidden');
+      } else {
+        show(okBox, 'Workflow created.');
+      }
+    } catch (e) {
+      show(errBox, 'Network error: ' + e.message);
+    }
+  });
+})();
+</script>
+</body>
+</html>
+{{ end }}

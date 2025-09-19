@@ -1,0 +1,25 @@
+{{ define "nav" }}
+<nav class="flex-grow">
+    {{ $active := .CurrentPath }}
+    <a href="/" class="block px-6 py-3 text-slate-100 hover:bg-cyan-500/50 hover:text-white transition-colors {{if eq $active "/"}} bg-cyan-600 text-white font-semibold {{end}}">
+    Dashboard
+    </a>
+    <a href="/search" class="block px-6 py-3 text-slate-100
+    hover:bg-cyan-500/50 hover:text-white transition-colors
+    {{ if or (eq $active "/search") (hasPrefix $active "/details") }} bg-cyan-600 text-white font-semibold {{ end }}">
+    Search
+    </a>
+    <a href="/executors" class="block px-6 py-3 text-slate-100 hover:bg-cyan-500/50 hover:text-white transition-colors {{if eq $active "/executors"}} bg-cyan-600 text-white font-semibold {{end}}">
+    Executors
+    </a>
+    <a href="/definitions" class="block px-6 py-3 text-slate-100 hover:bg-cyan-500/50 hover:text-white transition-colors {{if eq $active "/definitions"}} bg-cyan-600 text-white font-semibold {{end}}">
+    Definitions
+    </a>
+    <a href="/settings" class="block px-6 py-3 text-slate-100 hover:bg-cyan-500/50 hover:text-white transition-colors {{if eq $active "/settings"}} bg-cyan-600 text-white font-semibold {{end}}">
+    Settings
+    </a>
+    <form method="POST" action="/logout">
+        <button type="submit" class="w-full text-left block px-6 py-3 text-slate-100 hover:bg-red-500/60 hover:text-white transition-colors">Logout</button>
+    </form>
+</nav>
+{{ end }}

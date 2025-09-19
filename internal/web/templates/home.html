@@ -1,0 +1,70 @@
+{{ define "home" }}
+
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+
+    {{ template "header" . }}
+
+</head>
+<body class="bg-sky-50 font-sans leading-normal tracking-normal">
+<div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col">
+        <div class="p-6 text-center font-bold text-lg tracking-wide">
+            <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-cyan-500"></span>
+                GopherFlow
+            </span>
+        </div>
+
+        {{ template "nav" . }}
+
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex flex-col flex-grow">
+        <!-- Top Bar -->
+        <header class="bg-white border-b border-cyan-200/60 shadow-sm py-4 px-6 flex justify-start">
+            <h1 class="text-xl font-semibold text-slate-800" th:text="${title}"></h1>
+
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="p-6 flex-grow">
+            <div class="bg-white p-6 rounded-lg shadow-md pb-6 border border-cyan-200">
+                <h2 class="text-2xl font-bold mb-4 text-slate-800">Overview</h2>
+                <section
+                        hx-get="/home/overview"
+                        hx-trigger="load, every 15s"
+                        hx-indicator="#spinner">
+                </section>
+            </div>
+            <div class="grid grid-cols-2 gap-4 pt-6">
+                <div class="bg-white rounded-lg shadow-md p-6 border border-cyan-200">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">Workflows in Progress (Top 10)</h2>
+                    <section
+                            hx-get="/home/inprogresscount"
+                            hx-trigger="load, every 15s"
+                            hx-indicator="#spinner"
+                    >
+                    </section>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6 border border-cyan-200">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">Workflows To Execute Next (Top 10)</h2>
+                    <section
+                            hx-get="/home/nextexecutioncount"
+                            hx-trigger="load, every 15s"
+                            hx-indicator="#spinner"
+                    >
+                    </section>
+                </div>
+            </div>
+
+
+        </main>
+    </div>
+</div>
+</body>
+</html>
+{{ end }}

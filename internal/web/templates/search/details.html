@@ -1,0 +1,369 @@
+{{ define "details" }}
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+    mermaid.initialize({startOnLoad: true});
+
+</script>
+
+<style>
+
+    /*custom styling for the flowchart so that it is centered*/
+    pre {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Optional: Hide overflow if SVG exceeds boundaries */
+    }
+
+    svg {
+        max-width: 100%; /* Make sure SVG doesn't exceed pre's width */
+        max-height: 100%; /* Make sure SVG doesn't exceed pre's height */
+    }
+
+</style>
+
+
+<!-- Main Content -->
+<div class="flex flex-col flex-grow overflow-scroll" id="main-content">
+    <!-- Top Bar -->
+
+    <header class="bg-white shadow-md py-4 px-6 flex  justify-start grid grid-cols-1">
+        <div>
+            <h1 class="text-xl font-semibold text-gray-800">{{ .Title }}</h1>
+        </div>
+        <div>
+            {{- with .WorkflowDefinition }}
+            <p>{{ .Description }}</p>
+            {{- end }}
+        </div>
+
+    </header>
+
+    <main class="p-6 flex-grow">
+        <div class="pb-6">
+            <section class="bg-white rounded shadow-md p-6">
+                <table class="min-w-full bg-white border border-gray-200">
+                    <tbody>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">ID</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.ID }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">State</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.State }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Business Key</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.BusinessKey }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">External ID</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.ExternalId }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Executor ID</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.ExecutorID }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Status</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.Status }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Created</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.Created }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Modified</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.Modified }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">NextActivation</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.NextActivation }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Started At</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .Workflow.StartedAt }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+        <div class="grid grid-cols-[0.4fr_0.6fr] gap-2">
+            <div class="space-y-2">
+                <section class="bg-white rounded shadow-md p-6">
+                    <h2 class="text-lg font-semibold mb-2">Update State</h2>
+                    <form id="updateStateForm" class="space-y-3">
+                        <div>
+                            <label for="newState" class="block text-sm font-medium text-gray-700">Select State</label>
+                            <select id="newState" class="mt-1 block w-full border rounded px-3 py-2">
+                                {{- range .States }}
+                                <option value="{{ .Name }}" {{ if eq .Name $.Workflow.State }}selected{{ end }}>{{ .Name }}</option>
+                                {{- end }}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="nextActivation" class="block text-sm font-medium text-gray-700">Next Activation (defaults to NOW)</label>
+                            <input id="nextActivation" type="datetime-local" class="mt-1 block w-full border rounded px-3 py-2" />
+                        </div>
+                        <div id="updateErr" class="hidden p-2 rounded bg-red-100 text-red-700"></div>
+                        <div id="updateOk" class="hidden p-2 rounded bg-green-100 text-green-700"></div>
+                        <div class="flex gap-2">
+                            <button id="updateApplyBtn" type="button" class="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700">Apply</button>
+                        </div>
+                    </form>
+
+                    <!-- Confirmation Modal -->
+                    <div id="confirmModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+                        <div class="bg-white rounded shadow-lg w-full max-w-md border border-gray-200">
+                            <div class="px-4 py-3 border-b">
+                                <h3 class="text-lg font-semibold text-gray-800">Confirm Update</h3>
+                            </div>
+                            <div class="px-4 py-4 text-gray-700">
+                                <p class="mb-2">Are you sure you want to update the workflow state?</p>
+                                <ul class="list-disc ml-5 text-sm">
+                                    <li>New state: <span id="confirmState" class="font-medium"></span></li>
+                                    <li>Next activation: <span id="confirmNextAct" class="font-medium"></span></li>
+                                </ul>
+                            </div>
+                            <div class="px-4 py-3 border-t flex justify-end gap-2">
+                                <button id="confirmCancel" type="button" class="px-4 py-2 rounded border">Cancel</button>
+                                <button id="confirmProceed" type="button" class="px-4 py-2 rounded bg-cyan-600 text-white hover:bg-cyan-700">Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section class="bg-white rounded shadow-md p-6">
+                    <h2>Flow Diagram</h2>
+                    <pre class="mermaid">{{ .WorkflowDefinition.FlowChart }}</pre>
+                </section>
+            </div>
+            <div>
+                <section class="bg-white rounded shadow-md p-6">
+                    <div class="border-b border-gray-200 mb-4 flex gap-4">
+                        <button id="tab-btn-actions" class="px-3 py-2 text-sm font-medium border-b-2 border-cyan-600 text-cyan-600" onclick="wfShowTab('actions')">Actions</button>
+                        <button id="tab-btn-statevars" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-cyan-600" onclick="wfShowTab('statevars')">StateVars</button>
+                        <button id="tab-btn-updatevar" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-cyan-600" onclick="wfShowTab('updatevar')">Update State Var</button>
+                    </div>
+                    <div id="updateStateScriptMount"></div>
+
+                    <div id="tab-actions">
+                        {{- if .Actions }}
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="bg-sky-50 border-b border-gray-200">
+                            <tr>
+                                <th class="text-left px-4 py-2 text-gray-600 font-medium">Type</th>
+                                <th class="text-left px-4 py-2 text-gray-600 font-medium">Name</th>
+                                <th class="text-left px-4 py-2 text-gray-600 font-medium">Text</th>
+                                <th class="text-left px-4 py-2 text-gray-600 font-medium">Date/Time</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{- range .Actions }}
+                            <tr class="border-b text-gray-800 odd:bg-white even:bg-gray-50">
+                                <td class="px-4 py-2">{{ .Type }}</td>
+                                <td class="px-4 py-2">{{ .Name }}</td>
+                                <td class="px-4 py-2">{{ .Text }}</td>
+                                <td class="px-4 py-2 text-gray-500">{{ .DateTime }}</td>
+                            </tr>
+                            {{- end }}
+                            </tbody>
+                        </table>
+                        {{- else }}
+                        <div class="text-gray-500">No actions recorded for this workflow.</div>
+                        {{- end }}
+                    </div>
+
+                    <div id="tab-statevars" class="hidden">
+                        {{- if .StateVars }}
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="bg-sky-50 border-b border-gray-200">
+                            <tr>
+                                <th class="text-left px-4 py-2 text-gray-600 font-medium">Key</th>
+                                <th class="text-left px-4 py-2 text-gray-600 font-medium">Value (JSON)</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{- range $k, $v := .StateVars }}
+                            <tr class="border-b text-gray-800 odd:bg-white even:bg-gray-50">
+                                <td class="px-4 py-2 align-top font-medium">{{ $k }}</td>
+                                <td class="px-4 py-2">
+                                    <textarea class="w-full p-2 border border-gray-200 rounded font-mono text-sm" rows="6" readonly>{{ $v }}</textarea>
+                                </td>
+                            </tr>
+                            {{- end }}
+                            </tbody>
+                        </table>
+                        {{- else }}
+                        <div class="text-gray-500">No state variables for this workflow.</div>
+                        {{- end }}
+                    </div>
+
+                    <div id="tab-updatevar" class="hidden">
+                        <form id="updateVarForm" class="space-y-3">
+                            <div>
+                                <label for="svKey" class="block text-sm font-medium text-gray-700">Key</label>
+                                <input id="svKey" type="text" class="mt-1 block w-full border rounded px-3 py-2" placeholder="e.g. customerId" />
+                            </div>
+                            <div>
+                                <label for="svValue" class="block text-sm font-medium text-gray-700">Value (JSON or plain text)</label>
+                                <textarea id="svValue" class="mt-1 block w-full border rounded px-3 py-2 font-mono text-sm" rows="6" placeholder='{"foo":"bar"}'></textarea>
+                            </div>
+                            <div id="updateVarErr" class="hidden p-2 rounded bg-red-100 text-red-700"></div>
+                            <div id="updateVarOk" class="hidden p-2 rounded bg-green-100 text-green-700"></div>
+                            <div class="flex gap-2">
+                                <button id="updateVarBtn" type="button" class="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700">Save Variable</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <script>
+                        function wfShowTab(tab) {
+                            var actions = document.getElementById('tab-actions');
+                            var statevars = document.getElementById('tab-statevars');
+                            var updvar = document.getElementById('tab-updatevar');
+                            var btnA = document.getElementById('tab-btn-actions');
+                            var btnS = document.getElementById('tab-btn-statevars');
+                            var btnU = document.getElementById('tab-btn-updatevar');
+                            if (!actions || !statevars || !updvar) return;
+                            actions.classList.add('hidden');
+                            statevars.classList.add('hidden');
+                            updvar.classList.add('hidden');
+                            btnA.classList.remove('border-b-2','border-cyan-600','text-cyan-600');
+                            btnS.classList.remove('border-b-2','border-cyan-600','text-cyan-600');
+                            btnU.classList.remove('border-b-2','border-cyan-600','text-cyan-600');
+                            if (tab === 'actions') {
+                                actions.classList.remove('hidden');
+                                btnA.classList.add('border-b-2','border-cyan-600','text-cyan-600');
+                            } else if (tab === 'statevars') {
+                                statevars.classList.remove('hidden');
+                                btnS.classList.add('border-b-2','border-cyan-600','text-cyan-600');
+                            } else {
+                                updvar.classList.remove('hidden');
+                                btnU.classList.add('border-b-2','border-cyan-600','text-cyan-600');
+                            }
+                        }
+                    </script>
+                    <script>
+                        (function(){
+                            const form = document.getElementById('updateStateForm');
+                            if (!form) return;
+                            const errBox = document.getElementById('updateErr');
+                            const okBox = document.getElementById('updateOk');
+                            const applyBtn = document.getElementById('updateApplyBtn');
+                            const modal = document.getElementById('confirmModal');
+                            const confirmState = document.getElementById('confirmState');
+                            const confirmNextAct = document.getElementById('confirmNextAct');
+                            const btnCancel = document.getElementById('confirmCancel');
+                            const btnProceed = document.getElementById('confirmProceed');
+
+                            function show(el, msg){ if (msg !== undefined) el.textContent = msg; el.classList.remove('hidden'); }
+                            function hide(el){ el.classList.add('hidden'); if (el === errBox || el === okBox) el.textContent=''; }
+                            function openModal(){
+                                modal.classList.remove('hidden');
+                                modal.classList.add('flex');
+                            }
+                            function closeModal(){
+                                modal.classList.add('hidden');
+                                modal.classList.remove('flex');
+                            }
+
+                            async function doSubmit(){
+                                hide(errBox); hide(okBox);
+                                const state = document.getElementById('newState').value;
+                                const dtVal = document.getElementById('nextActivation').value;
+                                const payload = { state };
+                                if (dtVal) {
+                                    const d = new Date(dtVal);
+                                    if (!isNaN(d.getTime())) payload.nextActivation = d.toISOString();
+                                }
+                                try {
+                                    const resp = await fetch('/api/workflows/{{ .Workflow.ID }}/state', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(payload)
+                                    });
+                                    const text = await resp.text();
+                                    let data = null; try { data = text ? JSON.parse(text) : null; } catch{}
+                                    if (!resp.ok) {
+                                        show(errBox, (data && data.error) ? data.error : (text || 'Failed to update state'));
+                                        return;
+                                    }
+                                    show(okBox, 'State updated successfully.');
+                                    setTimeout(()=>{ window.location.reload(); }, 600);
+                                } catch (e) {
+                                    show(errBox, 'Network error: ' + e.message);
+                                }
+                            }
+
+                            // Intercept Apply
+                            applyBtn?.addEventListener('click', function(){
+                                const state = document.getElementById('newState').value;
+                                const dtVal = document.getElementById('nextActivation').value;
+                                confirmState.textContent = state || '(unchanged)';
+                                if (dtVal) {
+                                    confirmNextAct.textContent = new Date(dtVal).toLocaleString();
+                                } else {
+                                    confirmNextAct.textContent = 'NOW';
+                                }
+                                openModal();
+                            });
+
+                            btnCancel?.addEventListener('click', function(){ closeModal(); });
+                            modal?.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
+                            btnProceed?.addEventListener('click', async function(){
+                                closeModal();
+                                await doSubmit();
+                            });
+
+                            // Prevent direct form submit with Enter key; use modal flow
+                            form.addEventListener('submit', function(e){ e.preventDefault(); });
+                        })();
+                    </script>
+                    <script>
+                        (function(){
+                            const form = document.getElementById('updateVarForm');
+                            const keyEl = document.getElementById('svKey');
+                            const valEl = document.getElementById('svValue');
+                            const btn = document.getElementById('updateVarBtn');
+                            const err = document.getElementById('updateVarErr');
+                            const ok = document.getElementById('updateVarOk');
+                            function show(el, msg){ if (msg !== undefined) el.textContent = msg; el.classList.remove('hidden'); }
+                            function hide(el){ el.classList.add('hidden'); el.textContent=''; }
+                            async function submitVar(){
+                                hide(err); hide(ok);
+                                const key = keyEl.value.trim();
+                                const value = valEl.value;
+                                if (!key){ show(err, 'Key is required'); return; }
+                                try{
+                                    const resp = await fetch('/api/workflows/{{ .Workflow.ID }}/statevars', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({ key, value })
+                                    });
+                                    const text = await resp.text();
+                                    let data = null; try { data = text ? JSON.parse(text) : null; } catch{}
+                                    if (!resp.ok){
+                                        show(err, (data && data.error) ? data.error : (text || 'Failed to update state var'));
+                                        return;
+                                    }
+                                    show(ok, 'State var saved.');
+                                    setTimeout(()=>{ window.location.reload(); }, 600);
+                                }catch(e){
+                                    show(err, 'Network error: ' + e.message);
+                                }
+                            }
+                            btn?.addEventListener('click', submitVar);
+                            form?.addEventListener('submit', function(e){ e.preventDefault(); submitVar(); });
+                        })();
+                    </script>
+                </section>
+            </div>
+        </div>
+
+        </main>
+</div>
+{{ end }}

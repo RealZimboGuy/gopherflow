@@ -1,0 +1,21 @@
+{{ define "home_inprogress" }}
+<div>
+    {{ if .Rows }}
+        <ul class="divide-y divide-slate-200">
+            {{ range .Rows }}
+                <li class="py-2 flex justify-between items-center">
+                    <div>
+                        <a href="/details/{{ .ID }}" class="text-cyan-700 hover:underline font-medium">#{{ .ID }} - {{ .WorkflowType }}</a>
+                        <div class="text-slate-500 text-sm">State: {{ .State }} | Group: {{ .ExecutorGroup }}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-slate-700 text-sm">Modified: {{ .Modified }}</div>
+                    </div>
+                </li>
+            {{ end }}
+        </ul>
+    {{ else }}
+        <div class="text-slate-500">No workflows currently executing.</div>
+    {{ end }}
+</div>
+{{ end }}

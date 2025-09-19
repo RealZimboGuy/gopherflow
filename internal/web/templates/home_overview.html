@@ -1,0 +1,36 @@
+{{ define "home_overview" }}
+<div>
+    {{ if .Rows }}
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-cyan-200 text-sm">
+            <thead class="bg-sky-50">
+            <tr>
+                <th class="text-left px-4 py-2 border-b">Executor Group</th>
+                <th class="text-left px-4 py-2 border-b">Workflow Type</th>
+                <th class="text-right px-4 py-2 border-b">NEW</th>
+                <th class="text-right px-4 py-2 border-b">SCHEDULED</th>
+                <th class="text-right px-4 py-2 border-b">EXECUTING</th>
+                <th class="text-right px-4 py-2 border-b">IN_PROGRESS</th>
+                <th class="text-right px-4 py-2 border-b">FINISHED</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{ range .Rows }}
+            <tr class="odd:bg-white even:bg-gray-50">
+                <td class="px-4 py-2 border-b">{{ .ExecutorGroup }}</td>
+                <td class="px-4 py-2 border-b">{{ .WorkflowType }}</td>
+                <td class="px-4 py-2 border-b text-right">{{ .NewCount }}</td>
+                <td class="px-4 py-2 border-b text-right">{{ .ScheduledCount }}</td>
+                <td class="px-4 py-2 border-b text-right">{{ .ExecutingCount }}</td>
+                <td class="px-4 py-2 border-b text-right">{{ .InProgressCount }}</td>
+                <td class="px-4 py-2 border-b text-right">{{ .FinishedCount }}</td>
+            </tr>
+            {{ end }}
+            </tbody>
+        </table>
+    </div>
+    {{ else }}
+        <div class="text-slate-500">No workflows found.</div>
+    {{ end }}
+</div>
+{{ end }}

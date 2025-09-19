@@ -1,0 +1,64 @@
+{{ define "executors" }}
+
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+
+    {{ template "header" . }}
+
+</head>
+<body class="bg-sky-50 font-sans leading-normal tracking-normal">
+<div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col">
+        <div class="p-6 text-center font-bold text-lg tracking-wide">
+            <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-cyan-500"></span>
+                GopherFlow
+            </span>
+        </div>
+
+        {{ template "nav" . }}
+
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex flex-col flex-grow overflow-scroll" id="main-content">
+        <!-- Top Bar -->
+        <header class="bg-white shadow-md py-4 px-6 flex  justify-start">
+            <h1 class="text-xl font-semibold text-gray-800">{{ .Title }}</h1>
+
+        </header>
+
+        <main class="p-6 flex-grow">
+            <section class="bg-white rounded shadow-md p-6">
+                <table class="min-w-full bg-white border border-gray-200">
+                    <thead class="bg-sky-50 border-b border-gray-200">
+                    <tr>
+                        <th class="text-left px-4 py-2 text-gray-600 font-medium">ID</th>
+                        <th class="text-left px-4 py-2 text-gray-600 font-medium">Group</th>
+                        <th class="text-left px-4 py-2 text-gray-600 font-medium">Host</th>
+                        <th class="text-left px-4 py-2 text-gray-600 font-medium">Started At</th>
+                        <th class="text-left px-4 py-2 text-gray-600 font-medium">Last Alive</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    {{- range .Executors }}
+                    <tr class="border-b text-gray-800 hover:bg-cyan-600 hover:text-white {{ .CssClass }}">
+                        <td class="px-4 py-2 ">{{ .ID }}</td>
+                        <td class="px-4 py-2 ">{{ .Group }}</td>
+                        <td class="px-4 py-2 ">{{ .Host }}</td>
+                        <td class="px-4 py-2 ">{{ .StartedAt }}</td>
+                        <td class="px-4 py-2 ">{{ .LastAlive }}</td>
+                    </tr>
+                    {{- end }}
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>
+{{ end }}

@@ -1,0 +1,113 @@
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+    mermaid.initialize({startOnLoad: true});
+
+</script>
+
+<style>
+
+    /*custom styling for the flowchart so that it is centered*/
+    pre {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Optional: Hide overflow if SVG exceeds boundaries */
+    }
+
+    svg {
+        max-width: 100%; /* Make sure SVG doesn't exceed pre's width */
+        max-height: 100%; /* Make sure SVG doesn't exceed pre's height */
+    }
+
+</style>
+
+
+<!-- Main Content -->
+<div class="flex flex-col flex-grow overflow-scroll" id="main-content">
+    <!-- Top Bar -->
+
+    <header class="bg-white shadow-md py-4 px-6 flex  justify-start grid grid-cols-1">
+        <div>
+            <h1 class="text-xl font-semibold text-gray-800">{{ .Title }}</h1>
+        </div>
+        <div>
+            {{- with .WorkflowDefinition }}
+            <p>{{ .Description }}</p>
+            {{- end }}
+        </div>
+
+    </header>
+
+    <main class="p-6 flex-grow">
+        <div class="pb-6">
+            <section class="bg-white rounded shadow-md p-6">
+                <table class="min-w-full bg-white border border-gray-200">
+                    <tbody>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Created</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .WorkflowDefinition.Created }}</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Updated</td>
+                        <td class="px-4 py-2 text-gray-800">{{ .WorkflowDefinition.Updated }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <section class="bg-white rounded shadow-md p-6">
+                    <h2>Flow Diagram</h2>
+                    <pre class="mermaid">{{ .WorkflowDefinition.FlowChart }}</pre>
+                </section>
+            </div>
+            <div>
+                <section class="bg-white rounded shadow-md p-6">
+                    <h2 class="text-lg font-semibold mb-4">Overview</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-gray-200 text-sm">
+                            <thead class="bg-sky-50">
+                            <tr>
+                                <th class="text-left px-4 py-2 border-b">State</th>
+                                <th class="text-right px-4 py-2 border-b">New</th>
+                                <th class="text-right px-4 py-2 border-b">Scheduled</th>
+                                <th class="text-right px-4 py-2 border-b">Executing</th>
+                                <th class="text-right px-4 py-2 border-b">In Progress</th>
+                                <th class="text-right px-4 py-2 border-b">Finished</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{- range .States }}
+                            <tr class="odd:bg-white even:bg-gray-50">
+                                <td class="px-4 py-2 border-b">{{ .State }}</td>
+                                <td class="px-4 py-2 border-b text-right">{{ .New }}</td>
+                                <td class="px-4 py-2 border-b text-right">{{ .Scheduled }}</td>
+                                <td class="px-4 py-2 border-b text-right">{{ .Executing }}</td>
+                                <td class="px-4 py-2 border-b text-right">{{ .InProgress }}</td>
+                                <td class="px-4 py-2 border-b text-right">{{ .Finished }}</td>
+                            </tr>
+                            {{- end }}
+                            </tbody>
+                            <tfoot>
+                            <tr class="font-semibold">
+                                <td class="px-4 py-2 border-t">Total</td>
+                                <td class="px-4 py-2 border-t text-right">{{ .Totals.New }}</td>
+                                <td class="px-4 py-2 border-t text-right">{{ .Totals.Scheduled }}</td>
+                                <td class="px-4 py-2 border-t text-right">{{ .Totals.Executing }}</td>
+                                <td class="px-4 py-2 border-t text-right">{{ .Totals.InProgress }}</td>
+                                <td class="px-4 py-2 border-t text-right">{{ .Totals.Finished }}</td>
+                            </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+    </main>
+</div>

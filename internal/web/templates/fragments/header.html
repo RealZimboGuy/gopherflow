@@ -1,0 +1,18 @@
+
+    {{ define "header" }}
+    <title>GopherFlow</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({startOnLoad: true});
+
+        document.addEventListener('htmx:afterRequest', function(evt) {
+                mermaid.contentLoaded()
+        });
+    </script>
+
+    {{ end }}

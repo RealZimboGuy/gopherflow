@@ -1,0 +1,68 @@
+{{ define "definitions" }}
+
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+
+    {{ template "header" . }}
+
+</head>
+<body class="bg-sky-50 font-sans leading-normal tracking-normal">
+<div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col">
+        <div class="p-6 text-center font-bold text-lg tracking-wide">
+            <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-cyan-500"></span>
+                GopherFlow
+            </span>
+        </div>
+
+        {{ template "nav" . }}
+
+    </aside>
+
+
+    <!-- Main Content -->
+    <div class="flex flex-col flex-grow overflow-scroll" id="main-content">
+        <!-- Top Bar -->
+        <header class="bg-white shadow-md py-4 px-6 flex  justify-start">
+            <h1 class="text-xl font-semibold text-gray-800" th:text="${title}"></h1>
+
+        </header>
+
+        <main class="p-6 flex-grow">
+            <section class="bg-white rounded shadow-md p-6">
+                <table class="min-w-full bg-white border border-gray-200">
+                    <thead class="bg-sky-50 border-b border-gray-200">
+                    <tr>
+                        <th class="text-left px-4 py-2 text-gray-600 font-medium">Workflow</th>
+                        <th class="text-left px-4 py-2 text-gray-600 font-medium">Created</th>
+                        <th class="text-left px-4 py-2 text-gray-600 font-medium">Updated</th>
+                        <th class="text-right px-4 py-2 text-gray-600 font-medium">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {{- range .Definitions }}
+                    <tr class="border-b text-gray-800 hover:bg-cyan-600 hover:text-white cursor-pointer"
+                        hx-get="/definitions/{{ .Name }}"
+                        hx-target="#main-content"
+                        hx-indicator="#spinner"
+                        hx-trigger="click">
+                        <td class="px-4 py-2 ">{{ .Name }}</td>
+                        <td class="px-4 py-2 ">{{ .Created }}</td>
+                        <td class="px-4 py-2 ">{{ .Updated }}</td>
+                        <td class="px-4 py-2 text-right">
+                            <a href="/definitions/{{ .Name }}/create" onclick="event.stopPropagation();" class="inline-block bg-cyan-600 text-white px-3 py-1 rounded hover:bg-white hover:text-cyan-600 border border-cyan-600 transition-colors">Create</a>
+                        </td>
+                    </tr>
+                    {{- end }}
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>
+{{end}}

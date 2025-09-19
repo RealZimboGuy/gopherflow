@@ -1,0 +1,43 @@
+#Run with
+#  docker build -t gopher-flow:1.0 -f Dockerfile.multistage .
+
+#- docker run
+# -e GFLOW_DATABASE_TYPE=SQLLITE
+# -e DATABASE_SQLLITE_FILE_NAME=/data/gflow.db
+# -v "$(pwd)/data:/data"
+# gopher-flow:1.0
+
+# Build the application from source
+FROM golang:1.25.1 AS build-stage
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=1 GOOS=linux go build -o /gopher-flow cmd/gopherflow/main.go
+
+# Run the tests in the container
+FROM build-stage AS run-test-stage
+RUN go test -v ./...
+
+# Prepare a writable data directory
+FROM busybox AS data-stage
+RUN mkdir -p /data
+
+# Deploy the application binary into a lean image
+FROM gcr.io/distroless/base-debian12 AS build-release-stage
+
+WORKDIR /
+
+COPY --from=build-stage /gopher-flow /gopher-flow
+# Copy a pre-created /data directory and set correct ownership without RUN
+COPY --from=data-stage --chown=nonroot:nonroot /data /data
+
+EXPOSE 8080
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["/gopher-flow"]

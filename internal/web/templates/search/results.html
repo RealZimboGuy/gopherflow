@@ -1,0 +1,61 @@
+{{ define "search_results" }}
+<div class="space-y-3">
+    <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-600">Results: {{ .Results }} | Offset: {{ .Offset }} | Limit: {{ .Limit }}</div>
+        <div class="flex items-center gap-2">
+            {{- if gt .Offset 0 }}
+            <button class="px-3 py-1 rounded border border-cyan-200 text-slate-700 hover:bg-cyan-600 hover:text-white"
+                    hx-get="/search/results?q={{ .Q }}&status={{ .Status }}&state={{ .State }}&workflowType={{ .WorkflowType }}&executorGroup={{ .ExecutorGroup }}&limit={{ .Limit }}&offset={{ .PrevOffset }}"
+                    hx-target="#results">
+                Prev
+            </button>
+            {{- end }}
+            <button class="px-3 py-1 rounded border border-cyan-200 text-slate-700 hover:bg-cyan-600 hover:text-white"
+                    hx-get="/search/results?q={{ .Q }}&status={{ .Status }}&state={{ .State }}&workflowType={{ .WorkflowType }}&executorGroup={{ .ExecutorGroup }}&limit={{ .Limit }}&offset={{ .NextOffset }}"
+                    hx-target="#results">
+                Next
+            </button>
+        </div>
+    </div>
+
+    <table class="min-w-full bg-white border border-gray-200">
+        <thead class="bg-sky-50 border-b border-gray-200">
+        <tr>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">ID</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">External ID</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">Workflow Type</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">Business Key</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">Status</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">State</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">Executor Group</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">Next Activation</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">Created</th>
+            <th class="text-left px-4 py-2 text-gray-600 font-medium">Modified</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{- if .Workflows }}
+            {{- range .Workflows }}
+            <tr class="border-b text-gray-800 hover:bg-cyan-600 hover:text-white cursor-pointer"
+                onclick="window.location.href='/details/{{ .ID }}'">
+                <td class="px-4 py-2">{{ .ID }}</td>
+                <td class="px-4 py-2">{{ .ExternalID }}</td>
+                <td class="px-4 py-2">{{ .WorkflowType }}</td>
+                <td class="px-4 py-2">{{ .BusinessKey }}</td>
+                <td class="px-4 py-2">{{ .Status }}</td>
+                <td class="px-4 py-2">{{ .State }}</td>
+                <td class="px-4 py-2">{{ .ExecutorGroup }}</td>
+                <td class="px-4 py-2">{{ .NextActivation }}</td>
+                <td class="px-4 py-2">{{ .Created }}</td>
+                <td class="px-4 py-2">{{ .Modified }}</td>
+            </tr>
+            {{- end }}
+        {{- else }}
+            <tr>
+                <td colspan="8" class="px-4 py-6 text-center text-gray-500">No results</td>
+            </tr>
+        {{- end }}
+        </tbody>
+    </table>
+</div>
+{{ end }}

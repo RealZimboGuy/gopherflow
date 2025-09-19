@@ -1,0 +1,26 @@
+{{ define "details_page" }}
+
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    {{ template "header" . }}
+</head>
+<body class="bg-sky-50 font-sans leading-normal tracking-normal">
+<div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col">
+        <div class="p-6 text-center font-bold text-lg tracking-wide">
+            <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-cyan-500"></span>
+                GopherFlow
+            </span>
+        </div>
+        {{ template "nav" . }}
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    {{ template "details" . }}
+</div>
+</body>
+</html>
+{{ end }}
