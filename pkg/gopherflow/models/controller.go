@@ -1,6 +1,6 @@
 package models
 
-import "github.com/RealZimboGuy/gopherflow/internal/domain"
+import domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 
 type SearchWorkflowRequest struct {
 	ID            int64  `json:"id"`

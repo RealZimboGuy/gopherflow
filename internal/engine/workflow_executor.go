@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
-	"github.com/RealZimboGuy/gopherflow/internal/models"
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 )
 
 // Engine runs a workflow

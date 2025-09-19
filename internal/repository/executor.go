@@ -2,9 +2,10 @@ package repository
 
 import (
 	"database/sql"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
 	"strings"
 	"time"
+
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 // ExecutorRepository provides persistence for executors table.

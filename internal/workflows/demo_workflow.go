@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/RealZimboGuy/gopherflow/internal/core"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
-	"github.com/RealZimboGuy/gopherflow/internal/models"
-	"github.com/RealZimboGuy/gopherflow/internal/workflow_helpers"
+	domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/workflow_helpers"
 )
 
 // Define a named string type

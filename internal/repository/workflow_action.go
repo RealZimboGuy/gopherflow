@@ -2,8 +2,9 @@ package repository
 
 import (
 	"database/sql"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
 	"log/slog"
+
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 // WorkflowActionRepository provides methods to persist and query workflow action records.

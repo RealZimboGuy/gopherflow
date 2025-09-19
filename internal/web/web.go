@@ -6,12 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
 	"github.com/RealZimboGuy/gopherflow/internal/config"
 	"github.com/RealZimboGuy/gopherflow/internal/controllers"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
 	"github.com/RealZimboGuy/gopherflow/internal/engine"
-	"github.com/RealZimboGuy/gopherflow/internal/models"
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
+
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -389,7 +391,7 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 	// Build States options from workflow definition if available (fallback: current state only)
 	var stateOptions []stateOption
 	// Prefer states from the workflow implementation via engine registry
- if inst, err := engine.CreateWorkflowInstance(wc.manager, wf.WorkflowType); err == nil && inst != nil {
+	if inst, err := engine.CreateWorkflowInstance(wc.manager, wf.WorkflowType); err == nil && inst != nil {
 		for _, s := range inst.GetAllStates() {
 			stateOptions = append(stateOptions, stateOption{Name: s.Name})
 		}
@@ -467,7 +469,7 @@ func (wc *WebController) definitionByNameHandler(w http.ResponseWriter, r *http.
 	}
 
 	// Build Overview rows: list all states from workflow and merge DB counts
- inst, err := engine.CreateWorkflowInstance(wc.manager, def.Name)
+	inst, err := engine.CreateWorkflowInstance(wc.manager, def.Name)
 	if err != nil {
 		slog.Error("Failed to create workflow instance for states", "name", def.Name, "error", err)
 	}

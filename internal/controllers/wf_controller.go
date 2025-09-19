@@ -3,10 +3,12 @@ package controllers
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
+
 	"github.com/RealZimboGuy/gopherflow/internal/engine"
-	"github.com/RealZimboGuy/gopherflow/internal/models"
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
+
 	"log/slog"
 	"net/http"
 	"strconv"

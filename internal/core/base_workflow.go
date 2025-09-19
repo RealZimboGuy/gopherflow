@@ -2,8 +2,9 @@ package core
 
 import (
 	"encoding/json"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
 	"log/slog"
+
+	domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 // BaseWorkflow holds common workflow state and provides shared setup logic.

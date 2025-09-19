@@ -2,8 +2,9 @@ package workflows
 
 import (
 	"github.com/RealZimboGuy/gopherflow/internal/core"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
-	"github.com/RealZimboGuy/gopherflow/internal/models"
+	domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
+
 	"io"
 	"log/slog"
 	"net/http"

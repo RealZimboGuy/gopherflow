@@ -2,15 +2,16 @@ package engine
 
 import (
 	"fmt"
-	"github.com/RealZimboGuy/gopherflow/internal/config"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
-	"github.com/RealZimboGuy/gopherflow/internal/models"
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"log/slog"
 	"os"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/RealZimboGuy/gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 )
 
 var workflowQueue chan Workflow // Initialized in StartEngine using system setting

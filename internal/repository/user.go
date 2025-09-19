@@ -2,8 +2,9 @@ package repository
 
 import (
 	"database/sql"
-	"github.com/RealZimboGuy/gopherflow/internal/domain"
 	"time"
+
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 // UserRepository provides persistence methods for the users table.
