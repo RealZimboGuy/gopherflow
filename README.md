@@ -45,29 +45,29 @@ refer to the example application:  https://github.com/RealZimboGuy/gopherflow-ex
     go get github.com/RealZimboGuy/gopherflow@v1.0.6
 
 a struct that extends the base 
-```
+```go
 type GetIpWorkflow struct {
 core.BaseWorkflow
 }
 ```
 the workflow interface must be fully implemented
 
-```
+```go
 type Workflow interface {
 StateTransitions() map[string][]string // map of state name -> list of next state names
-InitialState() string
+InitialState() string // where to start
 Description() string
 Setup(wf *domain.Workflow)
 GetWorkflowData() *domain.Workflow
 GetStateVariables() map[string]string
-GetAllStates() []models.WorkflowState // where to start
+GetAllStates() []models.WorkflowState 
 GetRetryConfig() models.RetryConfig
-}```
+}
 
 ```
 ### Here is the example for the GetIpWorkflow
 
-```
+```go
 import (
 "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
@@ -160,7 +160,7 @@ defer resp.Body.Close()
 ```
 
 ### Main function
-    
+```go
     import (
     "log/slog"
     "reflect"
@@ -182,3 +182,4 @@ defer resp.Body.Close()
             slog.Error("Engine exited with error", "error", err)
         }
     }
+```
