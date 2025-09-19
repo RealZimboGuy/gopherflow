@@ -2,12 +2,13 @@ package workflows
 
 import (
 	"fmt"
-	"gopherflow/internal/core"
-	"gopherflow/internal/domain"
-	"gopherflow/internal/models"
-	"gopherflow/internal/workflow_helpers"
 	"log/slog"
 	"time"
+
+	"github.com/RealZimboGuy/gopherflow/internal/core"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/models"
+	"github.com/RealZimboGuy/gopherflow/internal/workflow_helpers"
 )
 
 // Define a named string type

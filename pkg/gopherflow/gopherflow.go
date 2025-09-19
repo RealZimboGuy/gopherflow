@@ -2,17 +2,18 @@ package gopherflow
 
 import (
 	"database/sql"
-	"gopherflow/internal/config"
-	"gopherflow/internal/controllers"
-	"gopherflow/internal/engine"
-	"gopherflow/internal/migrations"
-	"gopherflow/internal/repository"
-	"gopherflow/internal/web"
+	"github.com/RealZimboGuy/gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/internal/controllers"
+	"github.com/RealZimboGuy/gopherflow/internal/engine"
+	"github.com/RealZimboGuy/gopherflow/internal/migrations"
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/web"
 	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -27,6 +28,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var WorkflowRegistry map[string]reflect.Type
 
 // Start boots the workflow engine and HTTP server.
 // It expects engine.WorkflowRegistry to be populated by the caller before invocation.
@@ -58,7 +61,7 @@ func Start() error {
 	definitionRepo := repository.NewWorkflowDefinitionRepository(db)
 	userRepo := repository.NewUserRepository(db)
 
-	wfManager := engine.NewWorkflowManager(workflowRepo, workflowActionRepo, executorRepo, definitionRepo)
+	wfManager := engine.NewWorkflowManager(workflowRepo, workflowActionRepo, executorRepo, definitionRepo, &WorkflowRegistry)
 
 	dur, _ := time.ParseDuration(config.GetSystemSettingString(config.ENGINE_CHECK_DB_INTERVAL))
 	go wfManager.StartEngine(dur)
@@ -66,7 +69,7 @@ func Start() error {
 	mux := http.NewServeMux()
 	workflowsController := controllers.NewWorkflowsController(workflowRepo, workflowActionRepo, wfManager, userRepo)
 	workflowsController.RegisterRoutes(mux)
-	actionsController := controllers.NewActionsController(workflowRepo, wfManager, workflowActionRepo, userRepo)
+	actionsController := controllers.NewActionsController(workflowRepo, workflowActionRepo, userRepo)
 	actionsController.RegisterRoutes(mux)
 	executorsController := controllers.NewExecutorsController(executorRepo, userRepo)
 	executorsController.RegisterRoutes(mux)

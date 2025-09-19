@@ -2,8 +2,8 @@ package repository
 
 import (
 	"database/sql"
-	"gopherflow/internal/config"
-	"gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
 )
 
 type WorkflowDefinitionRepository struct {

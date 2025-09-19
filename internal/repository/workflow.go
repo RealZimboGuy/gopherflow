@@ -3,9 +3,9 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"gopherflow/internal/config"
-	"gopherflow/internal/domain"
-	"gopherflow/internal/models"
+	"github.com/RealZimboGuy/gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/models"
 	"log/slog"
 	"regexp"
 	"strconv"

@@ -2,10 +2,10 @@ package engine
 
 import (
 	"fmt"
-	"gopherflow/internal/config"
-	"gopherflow/internal/domain"
-	"gopherflow/internal/models"
-	"gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/models"
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"log/slog"
 	"os"
 	"reflect"
@@ -13,11 +13,10 @@ import (
 	"time"
 )
 
-var WorkflowRegistry map[string]reflect.Type
-
 var workflowQueue chan Workflow // Initialized in StartEngine using system setting
 
 type WorkflowManager struct {
+	WorkflowRegistry   *map[string]reflect.Type
 	WorkflowRepo       *repository.WorkflowRepository
 	WorkflowActionRepo *repository.WorkflowActionRepository
 	executorRepo       *repository.ExecutorRepository
@@ -67,8 +66,10 @@ func (wm *WorkflowManager) DefinitionOverview(workflowType string) ([]repository
 }
 
 func NewWorkflowManager(workflowRepo *repository.WorkflowRepository, workflowActionRepo *repository.WorkflowActionRepository, executorRepo *repository.ExecutorRepository,
-	definitionRepo *repository.WorkflowDefinitionRepository) *WorkflowManager {
-	return &WorkflowManager{WorkflowRepo: workflowRepo,
+	definitionRepo *repository.WorkflowDefinitionRepository, WorkflowRegistry *map[string]reflect.Type) *WorkflowManager {
+	return &WorkflowManager{
+		WorkflowRegistry:   WorkflowRegistry,
+		WorkflowRepo:       workflowRepo,
 		WorkflowActionRepo: workflowActionRepo,
 		executorRepo:       executorRepo,
 		DefinitionRepo:     definitionRepo,
@@ -147,7 +148,7 @@ func startWorkflowRepairService(wm *WorkflowManager) {
 						Text:           "Repaired and scheduled, previous executor was: " + fmt.Sprint(previousExecutorId),
 						DateTime:       time.Now(),
 					})
-					instance, _ := createWorkflow(wf.WorkflowType)
+					instance, _ := createWorkflow(wm, wf.WorkflowType)
 					ptr := instance.(Workflow)
 					ptr.Setup(&wf)
 					workflowQueue <- ptr
@@ -160,7 +161,7 @@ func startWorkflowRepairService(wm *WorkflowManager) {
 
 func registerWorkflowDefinitions(wm *WorkflowManager) {
 
-	for name := range WorkflowRegistry {
+	for name := range *wm.WorkflowRegistry {
 		def, err := wm.DefinitionRepo.FindByName(name)
 		if err != nil {
 			// If not found, we'll create it; for other errors, log and continue
@@ -168,8 +169,8 @@ func registerWorkflowDefinitions(wm *WorkflowManager) {
 			def = nil
 		}
 
-		flow := buildFlowChart(name)
-		instance, _ := CreateWorkflowInstance(name)
+		flow := buildFlowChart(wm, name)
+		instance, _ := CreateWorkflowInstance(wm, name)
 		desc := fmt.Sprintf("%s", instance.Description())
 
 		if def == nil {
@@ -199,7 +200,7 @@ func registerWorkflowDefinitions(wm *WorkflowManager) {
 	}
 
 }
-func buildFlowChart(name string) string {
+func buildFlowChart(wm *WorkflowManager, name string) string {
 	var sb strings.Builder
 
 	// Modern class styles
@@ -209,7 +210,7 @@ func buildFlowChart(name string) string {
 	manualClass := "fill:#FFD93D,stroke:#E6C200,stroke-width:2px,color:#333,stroke-dasharray: 4 2,rx:10,ry:10;"
 	normalClass := "fill:#F0F4F8,stroke:#B0C4DE,stroke-width:1px,color:#333,rx:10,ry:10;"
 
-	inst, err := createWorkflow(name)
+	inst, err := createWorkflow(wm, name)
 	if err != nil {
 		return fmt.Sprintf("flowchart TD\n    %s[Uninitialized]\n", name)
 	}
@@ -315,7 +316,7 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 		_, _ = wm.WorkflowActionRepo.Save(&domain.WorkflowAction{WorkflowID: wf.ID, ExecutorID: wm.executorID, ExecutionCount: 1, Type: "SCHEDULED", Name: "SCHEDULED", Text: "Scheduled for Execution", DateTime: time.Now()})
 
 		// create an instance of the workflow based on the type
-		instance, _ := createWorkflow(wf.WorkflowType)
+		instance, _ := createWorkflow(wm, wf.WorkflowType)
 
 		slog.Info("Add workflow to execution channel", "business_key", wf.BusinessKey)
 		ptr := instance.(Workflow)
@@ -328,17 +329,16 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 
 }
 
-func createWorkflow(name string) (interface{}, error) {
-	t, ok := WorkflowRegistry[name]
+func createWorkflow(wm *WorkflowManager, name string) (interface{}, error) {
+	t, ok := (*wm.WorkflowRegistry)[name]
 	if !ok {
 		return nil, fmt.Errorf("workflow not found: %s", name)
 	}
 	return reflect.New(t).Interface(), nil
 }
 
-// CreateWorkflowInstance exposes workflow instantiation for external packages (e.g., controllers).
-func CreateWorkflowInstance(name string) (Workflow, error) {
-	inst, err := createWorkflow(name)
+func CreateWorkflowInstance(wm *WorkflowManager, name string) (Workflow, error) {
+	inst, err := createWorkflow(wm, name)
 	if err != nil {
 		return nil, err
 	}

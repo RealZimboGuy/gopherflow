@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
-	"gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"log/slog"
 	"net/http"
 )

@@ -1,9 +1,9 @@
 package workflows
 
 import (
-	"gopherflow/internal/core"
-	"gopherflow/internal/domain"
-	"gopherflow/internal/models"
+	"github.com/RealZimboGuy/gopherflow/internal/core"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/models"
 	"io"
 	"log/slog"
 	"net/http"

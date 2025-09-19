@@ -3,10 +3,10 @@ package controllers
 import (
 	"database/sql"
 	"encoding/json"
-	"gopherflow/internal/domain"
-	"gopherflow/internal/engine"
-	"gopherflow/internal/models"
-	"gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/engine"
+	"github.com/RealZimboGuy/gopherflow/internal/models"
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -85,7 +85,7 @@ func (c *WorkflowsController) handleCreateWorkflow(w http.ResponseWriter, r *htt
 	}
 
 	// Validate workflow type exists via engine registry and get initial state
-	wfInstance, err := engine.CreateWorkflowInstance(req.WorkflowType)
+	wfInstance, err := engine.CreateWorkflowInstance(c.WorkflowManager, req.WorkflowType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

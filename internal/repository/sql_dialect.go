@@ -2,7 +2,7 @@ package repository
 
 import (
 	"fmt"
-	"gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/internal/config"
 	"time"
 )
 

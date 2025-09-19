@@ -3,12 +3,13 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
-	"gopherflow/internal/domain"
-	"gopherflow/internal/models"
-	"gopherflow/internal/repository"
 	"log/slog"
 	"reflect"
 	"time"
+
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/models"
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
 )
 
 // Engine runs a workflow

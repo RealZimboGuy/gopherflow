@@ -2,7 +2,7 @@ package core
 
 import (
 	"encoding/json"
-	"gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
 	"log/slog"
 )
 

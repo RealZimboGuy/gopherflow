@@ -2,7 +2,7 @@ package repository
 
 import (
 	"database/sql"
-	"gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
 	"strings"
 	"time"
 )

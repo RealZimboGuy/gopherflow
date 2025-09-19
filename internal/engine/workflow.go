@@ -1,8 +1,8 @@
 package engine
 
 import (
-	"gopherflow/internal/domain"
-	"gopherflow/internal/models"
+	"github.com/RealZimboGuy/gopherflow/internal/domain"
+	"github.com/RealZimboGuy/gopherflow/internal/models"
 )
 
 // Define a named string type

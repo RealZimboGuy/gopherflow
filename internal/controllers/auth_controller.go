@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"net/http"
 	"time"
 )
