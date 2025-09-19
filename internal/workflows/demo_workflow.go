@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/RealZimboGuy/gopherflow/internal/core"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/workflow_helpers"

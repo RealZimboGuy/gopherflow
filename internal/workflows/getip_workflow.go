@@ -1,7 +1,7 @@
 package workflows
 
 import (
-	"github.com/RealZimboGuy/gopherflow/internal/core"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 
