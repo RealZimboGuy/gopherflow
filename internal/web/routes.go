@@ -1,10 +1,18 @@
 package web
 
-import "net/http"
+import (
+	"io/fs"
+	"net/http"
+)
 
 func (c *WebController) RegisterRoutes(mux *http.ServeMux) {
+	
 	// Static files (images)
-	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("internal/web/images"))))
+	imagesSub, err := fs.Sub(templatesFS, "internal/web/images")
+	if err != nil {
+		panic(err)
+	}
+	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.FS(imagesSub))))
 
 	// Public routes
 	mux.HandleFunc("GET /login", c.loginPageHandler)
