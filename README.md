@@ -39,6 +39,15 @@ Access the web console at http://localhost:8080/
     Username : admin
     Password : admin
 
+## Web Console
+
+<p align="center">
+<img src="screenshots/dashboard_view.png" alt="GopherFlow" style="max-width:300px;">
+<img src="screenshots/workflow_view.png" alt="GopherFlow" style="max-width:300px;">
+<img src="screenshots/definition.png" alt="GopherFlow" style="max-width:300px;">
+</p>
+
+
 ## Building your own Workflow and running it
 
 refer to the example application:  https://github.com/RealZimboGuy/gopherflow-examples
