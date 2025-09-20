@@ -6,9 +6,9 @@ import (
 )
 
 func (c *WebController) RegisterRoutes(mux *http.ServeMux) {
-	
+
 	// Static files (images)
-	imagesSub, err := fs.Sub(templatesFS, "internal/web/images")
+	imagesSub, err := fs.Sub(templatesFS, "images")
 	if err != nil {
 		panic(err)
 	}

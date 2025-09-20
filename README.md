@@ -30,7 +30,7 @@ This starts the demo application with a SQLite database, there are two workflows
         -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db\
         -v "$(pwd):/data"\
         --security-opt seccomp=unconfined \
-        juliangpurse/gopherflow:1.0.7
+        juliangpurse/gopherflow:1.0.8
 
 *note the --security-opt seccomp=unconfined  is required because of sqllite being run in a container*
 
@@ -45,7 +45,7 @@ refer to the example application:  https://github.com/RealZimboGuy/gopherflow-ex
 
 ### Specific details
 
-    go get github.com/RealZimboGuy/gopherflow@v1.0.7
+    go get github.com/RealZimboGuy/gopherflow@v1.0.8
 
 a struct that extends the base 
 ```go
