@@ -2,12 +2,6 @@ package gopherflow
 
 import (
 	"database/sql"
-	"github.com/RealZimboGuy/gopherflow/internal/config"
-	"github.com/RealZimboGuy/gopherflow/internal/controllers"
-	"github.com/RealZimboGuy/gopherflow/internal/engine"
-	"github.com/RealZimboGuy/gopherflow/internal/migrations"
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
-	"github.com/RealZimboGuy/gopherflow/internal/web"
 	"io/fs"
 	"log"
 	"log/slog"
@@ -16,6 +10,13 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/RealZimboGuy/gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/internal/controllers"
+	"github.com/RealZimboGuy/gopherflow/internal/engine"
+	"github.com/RealZimboGuy/gopherflow/internal/migrations"
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/web"
 
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/lmittmann/tint"
@@ -147,12 +148,13 @@ func setupMysqlDatabase() *sql.DB {
 
 	slog.Info("Using MySQL database", "url", dbURL)
 	slog.Info("Running migrations")
-	if err := runMigrationsFromEmbed("mysql", "mysql://"+dbURL); err != nil {
+	if err := runMigrationsFromEmbed("mysql", dbURL); err != nil {
 		slog.Error("DB migration failed", "error", err)
 		os.Exit(1)
 	}
 	slog.Info("Opening MySQL database")
-	dbMysql, err := sql.Open("mysql", dbURL)
+	//remove mysql:// prefix from url
+	dbMysql, err := sql.Open("mysql", strings.Replace(dbURL, "mysql://", "", 1))
 	if err != nil {
 		slog.Error("DB connection failed", "error", err)
 		os.Exit(1)
