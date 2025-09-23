@@ -192,8 +192,8 @@ func (c *WorkflowsController) handleCreateAndWaitWorkflow(w http.ResponseWriter,
 					w.WriteHeader(http.StatusOK)
 					apiResult := mapWorkflowToApiWorkflow(result, id)
 					json.NewEncoder(w).Encode(apiResult)
+					return
 				}
-				return
 			}
 		}
 	}
@@ -298,8 +298,17 @@ func (c *WorkflowsController) handleUpdateWorkflowState(w http.ResponseWriter, r
 		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
-	wf, err := c.WorkflowRepo.FindByID(parseInt64(idStr))
-	if err != nil || wf == nil {
+	var wf *domain.Workflow
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err == nil {
+		wf, _ = c.WorkflowRepo.FindByID(id)
+	}
+
+	// If not found by numeric ID, try as external ID
+	if wf == nil {
+		wf, _ = c.WorkflowRepo.FindByExternalId(idStr)
+	}
+	if wf == nil {
 		http.Error(w, "workflow not found", http.StatusNotFound)
 		return
 	}
@@ -355,11 +364,22 @@ func (c *WorkflowsController) handleUpdateWorkflowStateAndWait(w http.ResponseWr
 		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
-	wf, err := c.WorkflowRepo.FindByID(parseInt64(idStr))
-	if err != nil || wf == nil {
+	// Try to parse id as int64
+	var wf *domain.Workflow
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err == nil {
+		wf, _ = c.WorkflowRepo.FindByID(id)
+	}
+
+	// If not found by numeric ID, try as external ID
+	if wf == nil {
+		wf, _ = c.WorkflowRepo.FindByExternalId(idStr)
+	}
+	if wf == nil {
 		http.Error(w, "workflow not found", http.StatusNotFound)
 		return
 	}
+
 	var req models.UpdateWorkflowStateAndWaitRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -397,6 +417,26 @@ func (c *WorkflowsController) handleUpdateWorkflowStateAndWait(w http.ResponseWr
 	//add a log action
 	_, _ = c.WorkflowActionRepo.Save(&domain.WorkflowAction{WorkflowID: wf.ID, ExecutorID: 0, ExecutionCount: wf.RetryCount, Type: "LOG", Name: wf.State, Text: "User Manually Changed State :" + req.UpdateWorkflowStateRequest.State, DateTime: time.Now()})
 
+	if req.UpdateStateVarRequest.Key != "" {
+		// Parse current state vars JSON to map
+		vars := map[string]string{}
+		if wf.StateVars.Valid && wf.StateVars.String != "" {
+			_ = json.Unmarshal([]byte(wf.StateVars.String), &vars)
+		}
+		vars[req.UpdateStateVarRequest.Key] = req.UpdateStateVarRequest.Value
+		b, err := json.Marshal(vars)
+		if err != nil {
+			http.Error(w, "failed to serialize state vars", http.StatusInternalServerError)
+			return
+		}
+		if err := c.WorkflowRepo.SaveWorkflowVariablesAndTouch(wf.ID, string(b)); err != nil {
+			slog.Error("SaveWorkflowVariablesAndTouch failed", "error", err)
+			http.Error(w, "failed to update state var", http.StatusInternalServerError)
+			return
+		}
+		_, _ = c.WorkflowActionRepo.Save(&domain.WorkflowAction{WorkflowID: wf.ID, ExecutorID: 0, ExecutionCount: wf.RetryCount, Type: "LOG", Name: wf.State, Text: "Updated state var: " + req.UpdateStateVarRequest.Key, DateTime: time.Now()})
+	}
+
 	if err := c.WorkflowRepo.UpdateNextActivationSpecific(wf.ID, next); err != nil {
 		slog.Error("UpdateNextActivationSpecific failed", "error", err)
 		http.Error(w, "failed to update next activation", http.StatusInternalServerError)
@@ -424,8 +464,8 @@ func (c *WorkflowsController) handleUpdateWorkflowStateAndWait(w http.ResponseWr
 					w.WriteHeader(http.StatusOK)
 					apiResult := mapWorkflowToApiWorkflow(result, wf.ID)
 					json.NewEncoder(w).Encode(apiResult)
+					return
 				}
-				return
 			}
 		}
 	}
@@ -442,8 +482,17 @@ func (c *WorkflowsController) handleUpdateStateVar(w http.ResponseWriter, r *htt
 		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
-	wf, err := c.WorkflowRepo.FindByID(parseInt64(idStr))
-	if err != nil || wf == nil {
+	var wf *domain.Workflow
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err == nil {
+		wf, _ = c.WorkflowRepo.FindByID(id)
+	}
+
+	// If not found by numeric ID, try as external ID
+	if wf == nil {
+		wf, _ = c.WorkflowRepo.FindByExternalId(idStr)
+	}
+	if wf == nil {
 		http.Error(w, "workflow not found", http.StatusNotFound)
 		return
 	}

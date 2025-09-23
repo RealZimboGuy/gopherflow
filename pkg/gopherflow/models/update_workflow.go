@@ -17,6 +17,7 @@ type UpdateWorkflowStateRequest struct {
 }
 type UpdateWorkflowStateAndWaitRequest struct {
 	UpdateWorkflowStateRequest UpdateWorkflowStateRequest `json:"updateWorkflowStateRequest"`
+	UpdateStateVarRequest      UpdateStateVarRequest      `json:"updateStateVarRequest"`
 	WaitSeconds                int                        `json:"waitSeconds"`
 	CheckSeconds               int                        `json:"checkSeconds"`
 	FromStates                 []string                   `json:"fromStates"`
