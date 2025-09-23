@@ -187,7 +187,7 @@ func (c *WorkflowsController) handleCreateAndWaitWorkflow(w http.ResponseWriter,
 			// Try to fetch workflow result by ID
 			result, err := c.WorkflowManager.WorkflowRepo.FindByID(id)
 			if err == nil {
-				if contains(req.WaitForStates, result.State) {
+				if len(req.WaitForStates) == 0 || contains(req.WaitForStates, result.State) {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusOK)
 					apiResult := mapWorkflowToApiWorkflow(result, id)
@@ -459,7 +459,7 @@ func (c *WorkflowsController) handleUpdateWorkflowStateAndWait(w http.ResponseWr
 			// Try to fetch workflow result by ID
 			result, err := c.WorkflowManager.WorkflowRepo.FindByID(wf.ID)
 			if err == nil {
-				if contains(req.WaitForStates, result.State) {
+				if len(req.WaitForStates) == 0 || contains(req.WaitForStates, result.State) {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusOK)
 					apiResult := mapWorkflowToApiWorkflow(result, wf.ID)
