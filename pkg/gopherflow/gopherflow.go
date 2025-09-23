@@ -35,7 +35,7 @@ var WorkflowRegistry map[string]reflect.Type
 // Start boots the workflow engine and HTTP server.
 // It expects engine.WorkflowRegistry to be populated by the caller before invocation.
 // This call blocks until the HTTP server stops.
-func Start() error {
+func Start(mux *http.ServeMux) error {
 
 	databaseType := config.GetSystemSettingString(config.DATABASE_TYPE)
 	if databaseType == "" || (databaseType != config.DATABASE_TYPE_POSTGRES && databaseType != config.DATABASE_TYPE_MYSQL && databaseType != config.DATABASE_TYPE_SQLLITE) {
@@ -67,7 +67,9 @@ func Start() error {
 	dur, _ := time.ParseDuration(config.GetSystemSettingString(config.ENGINE_CHECK_DB_INTERVAL))
 	go wfManager.StartEngine(dur)
 
-	mux := http.NewServeMux()
+	if mux == nil {
+		mux = http.NewServeMux()
+	}
 	workflowsController := controllers.NewWorkflowsController(workflowRepo, workflowActionRepo, wfManager, userRepo)
 	workflowsController.RegisterRoutes(mux)
 	actionsController := controllers.NewActionsController(workflowRepo, workflowActionRepo, userRepo)
