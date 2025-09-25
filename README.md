@@ -190,7 +190,8 @@ defer resp.Body.Close()
             "DemoWorkflow":  reflect.TypeOf(workflows.DemoWorkflow{}),
             "GetIpWorkflow": reflect.TypeOf(workflows.GetIpWorkflow{}),
         }
-        if err := gopherflow.Start(); err != nil {
+		//pass nil to startup or your own mux if you want to add custom controllers etc to the http server
+        if err := gopherflow.Start(nil); err != nil {
             slog.Error("Engine exited with error", "error", err)
         }
     }
