@@ -406,7 +406,7 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 		SELECT ` + ALL_COLUMNS + `
 		FROM workflow
 		WHERE modified < NOW() - (` + placeholder(1) + ` || ' minutes')::interval
-		  AND status IN ('SCHEDULED', 'EXECUTING')
+		  AND status IN ('SCHEDULED', 'EXECUTING', 'IN_PROGRESS')
 		  AND executor_id IS NOT NULL
 		  AND executor_group = ` + placeholder(2) + `
 		  AND executor_id NOT IN (
@@ -423,7 +423,7 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 		SELECT ` + ALL_COLUMNS + `
 		FROM workflow
 		WHERE modified < ` + placeholder(1) + `
-		  AND status IN ('SCHEDULED', 'EXECUTING')
+		  AND status IN ('SCHEDULED', 'EXECUTING', 'IN_PROGRESS')
 		  AND executor_id IS NOT NULL
 		  AND executor_group = ` + placeholder(2) + `
 		  AND executor_id NOT IN (

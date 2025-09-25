@@ -154,7 +154,11 @@ func RunWorkflow(w Workflow, r repository.WorkflowRepository, wa repository.Work
 
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "FINISHED", Name: currentState, Text: "FINISHED", DateTime: time.Now()})
 	//clear out the executor id for another to possibly pick up the workflow
-	r.ClearExecutorId(w.GetWorkflowData().ID)
+	err = r.ClearExecutorId(w.GetWorkflowData().ID)
+	if err != nil {
+		slog.Error("Error clearing executor id", "error", err, "worker_id", workerID)
+		return
+	}
 	slog.Info("Workflow finished", "worker_id", workerID)
 
 }
