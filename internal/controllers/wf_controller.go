@@ -323,13 +323,13 @@ func (c *WorkflowsController) handleUpdateWorkflowState(w http.ResponseWriter, r
 		http.Error(w, "state is required", http.StatusBadRequest)
 		return
 	}
-	// Acquire lock via ClearStateAndExecutorAndSetNextExecution with current modified
+	// Acquire lock via LockWorkflowByModified with current modified
 	// We first update next activation to now (or provided) and set IN_PROGRESS status atomically guarding by modified
 	next := time.Now()
 	if req.NextActivation != nil {
 		next = *req.NextActivation
 	}
-	locked := c.WorkflowRepo.ClearStateAndExecutorAndSetNextExecution(wf.ID, wf.Modified)
+	locked := c.WorkflowRepo.LockWorkflowByModified(wf.ID, wf.Modified)
 	if !locked {
 		http.Error(w, "unable to acquire lock; workflow busy", http.StatusConflict)
 		return
@@ -397,13 +397,13 @@ func (c *WorkflowsController) handleUpdateWorkflowStateAndWait(w http.ResponseWr
 		return
 	}
 
-	// Acquire lock via ClearStateAndExecutorAndSetNextExecution with current modified
+	// Acquire lock via LockWorkflowByModified with current modified
 	// We first update next activation to now (or provided) and set IN_PROGRESS status atomically guarding by modified
 	next := time.Now()
 	if req.UpdateWorkflowStateRequest.NextActivation != nil {
 		next = *req.UpdateWorkflowStateRequest.NextActivation
 	}
-	locked := c.WorkflowRepo.ClearStateAndExecutorAndSetNextExecution(wf.ID, wf.Modified)
+	locked := c.WorkflowRepo.LockWorkflowByModified(wf.ID, wf.Modified)
 	if !locked {
 		http.Error(w, "unable to acquire lock; workflow busy", http.StatusConflict)
 		return

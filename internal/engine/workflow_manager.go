@@ -138,7 +138,7 @@ func startWorkflowRepairService(wm *WorkflowManager) {
 				slog.Warn("Repairing stuck workflow", "workflow_id", wf.ID, "business_key", wf.BusinessKey, "Current State", wf.State, "Status", wf.Status)
 				// Mark as scheduled and add to queue
 				previousExecutorId := wf.ExecutorID
-				exclusiveLock := wm.WorkflowRepo.ClearStateAndExecutorAndSetNextExecution(wf.ID, wf.Modified)
+				exclusiveLock := wm.WorkflowRepo.LockWorkflowByModified(wf.ID, wf.Modified)
 				if exclusiveLock {
 					_, _ = wm.WorkflowActionRepo.Save(&domain.WorkflowAction{
 						WorkflowID:     wf.ID,
