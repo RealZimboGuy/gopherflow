@@ -32,69 +32,88 @@ import (
 
 var WorkflowRegistry map[string]reflect.Type
 
-// Start boots the workflow engine and HTTP server.
-// It expects engine.WorkflowRegistry to be populated by the caller before invocation.
-// This call blocks until the HTTP server stops.
-func Start(mux *http.ServeMux) error {
+// App wires together the workflow engine, repositories, and HTTP server.
+type App struct {
+	DB      *sql.DB
+	Manager *engine.WorkflowManager
+	Mux     *http.ServeMux
+	Repos   struct {
+		Workflows   *repository.WorkflowRepository
+		Actions     *repository.WorkflowActionRepository
+		Executors   *repository.ExecutorRepository
+		Definitions *repository.WorkflowDefinitionRepository
+		Users       *repository.UserRepository
+	}
+}
 
+// Setup sets up the database, repositories, workflow manager, and HTTP mux.
+func Setup(mux *http.ServeMux) *App {
 	databaseType := config.GetSystemSettingString(config.DATABASE_TYPE)
-	if databaseType == "" || (databaseType != config.DATABASE_TYPE_POSTGRES && databaseType != config.DATABASE_TYPE_MYSQL && databaseType != config.DATABASE_TYPE_SQLLITE) {
-		panic("GFLOW_DATABASE_TYPE must be set to one of the following values: POSTGRES, MYSQL, SQLLITE")
+	if databaseType == "" || (databaseType != config.DATABASE_TYPE_POSTGRES &&
+		databaseType != config.DATABASE_TYPE_MYSQL &&
+		databaseType != config.DATABASE_TYPE_SQLLITE) {
+		panic("GFLOW_DATABASE_TYPE must be set to one of: POSTGRES, MYSQL, SQLLITE")
 	}
 
 	var db *sql.DB
-	if databaseType == config.DATABASE_TYPE_POSTGRES {
+	switch databaseType {
+	case config.DATABASE_TYPE_POSTGRES:
 		db = setupPostgresDatabase()
-		defer db.Close()
-	}
-	if databaseType == config.DATABASE_TYPE_SQLLITE {
+	case config.DATABASE_TYPE_SQLLITE:
 		db = setupSqlLiteDatabase()
-		defer db.Close()
-	}
-	if databaseType == config.DATABASE_TYPE_MYSQL {
+	case config.DATABASE_TYPE_MYSQL:
 		db = setupMysqlDatabase()
-		defer db.Close()
 	}
 
-	workflowRepo := repository.NewWorkflowRepository(db)
-	workflowActionRepo := repository.NewWorkflowActionRepository(db)
-	executorRepo := repository.NewExecutorRepository(db)
-	definitionRepo := repository.NewWorkflowDefinitionRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	app := &App{DB: db}
 
-	wfManager := engine.NewWorkflowManager(workflowRepo, workflowActionRepo, executorRepo, definitionRepo, &WorkflowRegistry)
+	// Repositories
+	app.Repos.Workflows = repository.NewWorkflowRepository(db)
+	app.Repos.Actions = repository.NewWorkflowActionRepository(db)
+	app.Repos.Executors = repository.NewExecutorRepository(db)
+	app.Repos.Definitions = repository.NewWorkflowDefinitionRepository(db)
+	app.Repos.Users = repository.NewUserRepository(db)
 
-	dur, _ := time.ParseDuration(config.GetSystemSettingString(config.ENGINE_CHECK_DB_INTERVAL))
-	go wfManager.StartEngine(dur)
+	// Workflows manager
+	app.Manager = engine.NewWorkflowManager(
+		app.Repos.Workflows,
+		app.Repos.Actions,
+		app.Repos.Executors,
+		app.Repos.Definitions,
+		&WorkflowRegistry,
+	)
 
+	// HTTP mux + routes
 	if mux == nil {
 		mux = http.NewServeMux()
 	}
-	workflowsController := controllers.NewWorkflowsController(workflowRepo, workflowActionRepo, wfManager, userRepo)
-	workflowsController.RegisterRoutes(mux)
-	actionsController := controllers.NewActionsController(workflowRepo, workflowActionRepo, userRepo)
-	actionsController.RegisterRoutes(mux)
-	executorsController := controllers.NewExecutorsController(executorRepo, userRepo)
-	executorsController.RegisterRoutes(mux)
-	webController := web.NewWebController(wfManager, userRepo)
-	webController.RegisterRoutes(mux)
+	controllers.NewWorkflowsController(app.Repos.Workflows, app.Repos.Actions, app.Manager, app.Repos.Users).RegisterRoutes(mux)
+	controllers.NewActionsController(app.Repos.Workflows, app.Repos.Actions, app.Repos.Users).RegisterRoutes(mux)
+	controllers.NewExecutorsController(app.Repos.Executors, app.Repos.Users).RegisterRoutes(mux)
+	web.NewWebController(app.Manager, app.Repos.Users).RegisterRoutes(mux)
+
+	app.Mux = mux
+	return app
+}
+
+// Run starts the workflow engine and HTTP server.
+func (a *App) Run() error {
+	// start engine in background
+	dur, _ := time.ParseDuration(config.GetSystemSettingString(config.ENGINE_CHECK_DB_INTERVAL))
+	go a.Manager.StartEngine(dur)
 
 	addr := ":" + config.GetSystemSettingString(config.ENGINE_SERVER_WEB_PORT)
 	if v := os.Getenv("HTTP_ADDR"); v != "" {
 		addr = v
 	}
 	slog.Info("Starting HTTP server", "addr", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		slog.Error("HTTP server failed", "error", err)
-		return err
-	}
-	return nil
+	return http.ListenAndServe(addr, a.Mux)
 }
 
 func setupPostgresDatabase() *sql.DB {
 	dbURL := config.GetSystemSettingString(config.DATABASE_URL)
 	if dbURL == "" {
-		panic("GFLOW_DATABASE_URL must be set when using the POSTGRES database type")
+		panic("GFLOW_DATABASE_URL must be set when using POSTGRES")
 	}
 	slog.Info("Using Postgres database", "url", dbURL)
 	slog.Info("Running migrations")
@@ -103,12 +122,12 @@ func setupPostgresDatabase() *sql.DB {
 		os.Exit(1)
 	}
 	slog.Info("Opening Postgres database")
-	dbPostgres, err := sql.Open("postgres", dbURL)
+	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		slog.Error("DB connection failed", "error", err)
 		os.Exit(1)
 	}
-	return dbPostgres
+	return db
 }
 
 func setupSqlLiteDatabase() *sql.DB {
@@ -124,26 +143,24 @@ func setupSqlLiteDatabase() *sql.DB {
 		os.Exit(1)
 	}
 	slog.Info("Opening SQLite database")
-	dbSqlLite, err := sql.Open("sqlite3", fileName)
+	db, err := sql.Open("sqlite3", fileName)
 	if err != nil {
 		log.Fatalf("Failed to open SQLite DB: %v", err)
 	}
-	if err := dbSqlLite.Ping(); err != nil {
+	if err := db.Ping(); err != nil {
 		log.Fatalf("Failed to ping SQLite DB: %v", err)
 	}
-	return dbSqlLite
+	return db
 }
 
 func setupMysqlDatabase() *sql.DB {
 	dbURL := config.GetSystemSettingString(config.DATABASE_URL)
 	if dbURL == "" {
-		panic("GFLOW_DATABASE_URL must be set when using the MYSQL database type")
+		panic("GFLOW_DATABASE_URL must be set when using MYSQL")
 	}
-	// panic if url does not contain ?parseTime=true
 	if !strings.Contains(dbURL, "parseTime=true") {
 		panic("GFLOW_DATABASE_URL must contain 'parseTime=true' for MySQL")
 	}
-	// panic if url does not  start with mysql://
 	if !strings.HasPrefix(dbURL, "mysql://") {
 		panic("GFLOW_DATABASE_URL must start with 'mysql://' for MySQL")
 	}
@@ -155,13 +172,12 @@ func setupMysqlDatabase() *sql.DB {
 		os.Exit(1)
 	}
 	slog.Info("Opening MySQL database")
-	//remove mysql:// prefix from url
-	dbMysql, err := sql.Open("mysql", strings.Replace(dbURL, "mysql://", "", 1))
+	db, err := sql.Open("mysql", strings.TrimPrefix(dbURL, "mysql://"))
 	if err != nil {
 		slog.Error("DB connection failed", "error", err)
 		os.Exit(1)
 	}
-	return dbMysql
+	return db
 }
 
 func runMigrationsFromEmbed(migrationsPath string, dbURL string) error {

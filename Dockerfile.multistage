@@ -1,8 +1,8 @@
 #Run with
-#  docker build --platform linux/amd64 -t juliangpurse/gopherflow:1.0.11 -f Dockerfile.multistage .
-# docker push juliangpurse/gopherflow:1.0.11
+#  docker build --platform linux/amd64 -t juliangpurse/gopherflow:1.0.12 -f Dockerfile.multistage .
+# docker push juliangpurse/gopherflow:1.0.12
 
- #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v "$(pwd):/data" juliangpurse/gopherflow:1.0.11
+ #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v "$(pwd):/data" juliangpurse/gopherflow:1.0.12
 
 # Build the application from source
 FROM golang:1.25.1 AS build-stage
