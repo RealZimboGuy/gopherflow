@@ -36,7 +36,6 @@ var WorkflowRegistry map[string]reflect.Type
 type App struct {
 	DB      *sql.DB
 	Manager *engine.WorkflowManager
-	Mux     *http.ServeMux
 	Repos   struct {
 		Workflows   *repository.WorkflowRepository
 		Actions     *repository.WorkflowActionRepository
@@ -47,7 +46,7 @@ type App struct {
 }
 
 // Setup sets up the database, repositories, workflow manager, and HTTP mux.
-func Setup(mux *http.ServeMux) *App {
+func Setup() *App {
 	databaseType := config.GetSystemSettingString(config.DATABASE_TYPE)
 	if databaseType == "" || (databaseType != config.DATABASE_TYPE_POSTGRES &&
 		databaseType != config.DATABASE_TYPE_MYSQL &&
@@ -83,16 +82,11 @@ func Setup(mux *http.ServeMux) *App {
 		&WorkflowRegistry,
 	)
 
-	// HTTP mux + routes
-	if mux == nil {
-		mux = http.NewServeMux()
-	}
-	controllers.NewWorkflowsController(app.Repos.Workflows, app.Repos.Actions, app.Manager, app.Repos.Users).RegisterRoutes(mux)
-	controllers.NewActionsController(app.Repos.Workflows, app.Repos.Actions, app.Repos.Users).RegisterRoutes(mux)
-	controllers.NewExecutorsController(app.Repos.Executors, app.Repos.Users).RegisterRoutes(mux)
-	web.NewWebController(app.Manager, app.Repos.Users).RegisterRoutes(mux)
+	controllers.NewWorkflowsController(app.Repos.Workflows, app.Repos.Actions, app.Manager, app.Repos.Users).RegisterRoutes()
+	controllers.NewActionsController(app.Repos.Workflows, app.Repos.Actions, app.Repos.Users).RegisterRoutes()
+	controllers.NewExecutorsController(app.Repos.Executors, app.Repos.Users).RegisterRoutes()
+	web.NewWebController(app.Manager, app.Repos.Users).RegisterRoutes()
 
-	app.Mux = mux
 	return app
 }
 
@@ -107,7 +101,7 @@ func (a *App) Run() error {
 		addr = v
 	}
 	slog.Info("Starting HTTP server", "addr", addr)
-	return http.ListenAndServe(addr, a.Mux)
+	return http.ListenAndServe(addr, nil)
 }
 
 func setupPostgresDatabase() *sql.DB {

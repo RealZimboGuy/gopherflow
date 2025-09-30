@@ -17,7 +17,7 @@ func main() {
 		"DemoWorkflow":  reflect.TypeOf(workflows.DemoWorkflow{}),
 		"GetIpWorkflow": reflect.TypeOf(workflows.GetIpWorkflow{}),
 	}
-	app := gopherflow.Setup(nil)
+	app := gopherflow.Setup()
 
 	if err := app.Run(); err != nil {
 		slog.Error("Engine exited with error", "error", err)
