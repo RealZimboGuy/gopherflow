@@ -142,7 +142,7 @@ return states
 }
 
 // Each method returns the next state
-func (m *GetIpWorkflow) Init() (*models.NextState, error) {
+func (m *GetIpWorkflow) Start() (*models.NextState, error) {
 slog.Info("Starting workflow")
 
 	return &models.NextState{
@@ -190,8 +190,8 @@ defer resp.Body.Close()
             "DemoWorkflow":  reflect.TypeOf(workflows.DemoWorkflow{}),
             "GetIpWorkflow": reflect.TypeOf(workflows.GetIpWorkflow{}),
         }
-		//pass nil to startup or your own mux if you want to add custom controllers etc to the http server
-		app := gopherflow.Setup(nil)
+		//uses the defaul ServeMux
+		app := gopherflow.Setup()
 
 		if err := app.Run(); err != nil {
 			slog.Error("Engine exited with error", "error", err)
