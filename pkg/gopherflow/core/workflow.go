@@ -1,4 +1,4 @@
-package engine
+package core
 
 import (
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"

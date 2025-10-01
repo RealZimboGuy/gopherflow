@@ -44,13 +44,13 @@ func GetSystemSettingString(settingKey string) string {
 		return "60s" // default to 60 seconds
 	}
 	if settingKey == ENGINE_BATCH_SIZE {
-		return "5" // default to 5 seconds
+		return "15" // default to 5 seconds
 	}
 	if settingKey == ENGINE_STUCK_WORKFLOWS_REPAIR_AFTER_MINUTES {
 		return "5" // default to 5 minutes
 	}
 	if settingKey == ENGINE_EXECUTOR_SIZE {
-		return "5" // default to 5
+		return "15" // default to 5
 	}
 	if settingKey == ENGINE_EXECUTOR_GROUP {
 		return "default"

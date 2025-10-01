@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 )
 
 // Worker function that processes workflows from the queue
-func Worker(id int, executorID int64, workflowRepository repository.WorkflowRepository, workflowActionRepository repository.WorkflowActionRepository, workflowQueue <-chan Workflow) {
+func Worker(id int, executorID int64, workflowRepository repository.WorkflowRepository, workflowActionRepository repository.WorkflowActionRepository, workflowQueue <-chan core.Workflow) {
 	for {
 		wf := <-workflowQueue // blocks until a job arrives
 		slog.Info("Worker starting workflow", "worker_id", id)

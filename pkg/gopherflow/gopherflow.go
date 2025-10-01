@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"reflect"
 	"strings"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/RealZimboGuy/gopherflow/internal/migrations"
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"github.com/RealZimboGuy/gopherflow/internal/web"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/lmittmann/tint"
@@ -30,7 +30,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var WorkflowRegistry map[string]reflect.Type
+var WorkflowRegistry map[string]func() core.Workflow
 
 // App wires together the workflow engine, repositories, and HTTP server.
 type App struct {

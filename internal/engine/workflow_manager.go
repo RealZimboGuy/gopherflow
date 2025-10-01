@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/RealZimboGuy/gopherflow/internal/config"
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 )
 
-var workflowQueue chan Workflow // Initialized in StartEngine using system setting
+var workflowQueue chan core.Workflow // Initialized in StartEngine using system setting
 
 type WorkflowManager struct {
-	WorkflowRegistry   *map[string]reflect.Type
+	WorkflowRegistry   *map[string]func() core.Workflow
 	WorkflowRepo       *repository.WorkflowRepository
 	WorkflowActionRepo *repository.WorkflowActionRepository
 	executorRepo       *repository.ExecutorRepository
@@ -67,7 +67,7 @@ func (wm *WorkflowManager) DefinitionOverview(workflowType string) ([]repository
 }
 
 func NewWorkflowManager(workflowRepo *repository.WorkflowRepository, workflowActionRepo *repository.WorkflowActionRepository, executorRepo *repository.ExecutorRepository,
-	definitionRepo *repository.WorkflowDefinitionRepository, WorkflowRegistry *map[string]reflect.Type) *WorkflowManager {
+	definitionRepo *repository.WorkflowDefinitionRepository, WorkflowRegistry *map[string]func() core.Workflow) *WorkflowManager {
 	return &WorkflowManager{
 		WorkflowRegistry:   WorkflowRegistry,
 		WorkflowRepo:       workflowRepo,
@@ -95,7 +95,7 @@ func (wm *WorkflowManager) StartEngine(pollInterval time.Duration) {
 	if queueSize <= 0 {
 		queueSize = 10 // fallback default
 	}
-	workflowQueue = make(chan Workflow, queueSize)
+	workflowQueue = make(chan core.Workflow, queueSize)
 
 	// log starting and number of workers
 	slog.Info("Starting workflow engine", "workers", config.GetSystemSettingInteger(config.ENGINE_EXECUTOR_SIZE), "queue_size", queueSize)
@@ -150,7 +150,7 @@ func startWorkflowRepairService(wm *WorkflowManager) {
 						DateTime:       time.Now(),
 					})
 					instance, _ := createWorkflow(wm, wf.WorkflowType)
-					ptr := instance.(Workflow)
+					ptr := instance.(core.Workflow)
 					ptr.Setup(&wf)
 					workflowQueue <- ptr
 				}
@@ -215,7 +215,7 @@ func buildFlowChart(wm *WorkflowManager, name string) string {
 	if err != nil {
 		return fmt.Sprintf("flowchart TD\n    %s[Uninitialized]\n", name)
 	}
-	wf, ok := inst.(Workflow)
+	wf, ok := inst.(core.Workflow)
 	if !ok {
 		return fmt.Sprintf("flowchart TD\n    %s[Invalid Workflow]\n", name)
 	}
@@ -320,7 +320,7 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 		instance, _ := createWorkflow(wm, wf.WorkflowType)
 
 		slog.Info("Add workflow to execution channel", "business_key", wf.BusinessKey)
-		ptr := instance.(Workflow)
+		ptr := instance.(core.Workflow)
 		ptr.Setup(&wf)
 		workflowQueue <- ptr
 
@@ -330,20 +330,20 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 
 }
 
-func createWorkflow(wm *WorkflowManager, name string) (interface{}, error) {
-	t, ok := (*wm.WorkflowRegistry)[name]
+func createWorkflow(wm *WorkflowManager, name string) (core.Workflow, error) {
+	factory, ok := (*wm.WorkflowRegistry)[name]
 	if !ok {
 		return nil, fmt.Errorf("workflow not found: %s", name)
 	}
-	return reflect.New(t).Interface(), nil
+	return factory(), nil
 }
 
-func CreateWorkflowInstance(wm *WorkflowManager, name string) (Workflow, error) {
+func CreateWorkflowInstance(wm *WorkflowManager, name string) (core.Workflow, error) {
 	inst, err := createWorkflow(wm, name)
 	if err != nil {
 		return nil, err
 	}
-	wf, ok := inst.(Workflow)
+	wf, ok := inst.(core.Workflow)
 	if !ok {
 		return nil, fmt.Errorf("workflow type does not implement engine.Workflow: %s", name)
 	}

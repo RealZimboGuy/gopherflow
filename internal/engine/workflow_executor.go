@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 )
 
 // Engine runs a workflow
-func RunWorkflow(w Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string) {
+func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string) {
 
 	slog.Info("Running workflow", "workflow_id", w.GetWorkflowData().ID, "worker_id", workerID)
 	err := r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "EXECUTING")
@@ -163,7 +164,7 @@ func RunWorkflow(w Workflow, r repository.WorkflowRepository, wa repository.Work
 
 }
 
-func processWorflowCompleted(w Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string) bool {
+func processWorflowCompleted(w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string) bool {
 	slog.Info("Workflow completed", "worker_id", workerID)
 	err := r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "FINISHED")
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "END", Name: currentState, Text: "workflow complete", DateTime: time.Now()})
@@ -174,7 +175,7 @@ func processWorflowCompleted(w Workflow, r repository.WorkflowRepository, wa rep
 	return false
 }
 
-func processStateExecutionError(w Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string, callErr error) {
+func processStateExecutionError(w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string, callErr error) {
 	slog.Error("Error executing state method", "state", currentState, "error", callErr, "worker_id", workerID)
 	_, _ = wa.Save(&domain.WorkflowAction{
 		WorkflowID:     w.GetWorkflowData().ID,
@@ -210,7 +211,7 @@ func processStateExecutionError(w Workflow, r repository.WorkflowRepository, wa 
 	return
 }
 
-func compareAndSaveWorkflowStateVars(w Workflow, r repository.WorkflowRepository, workerID string) bool {
+func compareAndSaveWorkflowStateVars(w core.Workflow, r repository.WorkflowRepository, workerID string) bool {
 	jsonString, _ := json.Marshal(w.GetStateVariables())
 
 	if string(jsonString) != w.GetWorkflowData().StateVars.String {
