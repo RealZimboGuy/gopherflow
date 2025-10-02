@@ -18,10 +18,9 @@ func main() {
 			return &workflows.DemoWorkflow{}
 		},
 		"GetIpWorkflow": func() core.Workflow {
-			// You can now inject dependencies here
+			// You can inject dependencies here
 			return &workflows.GetIpWorkflow{
 				// HTTPClient: httpClient,
-				// Logger: logger,
 				// MyService: myService,
 			}
 		},

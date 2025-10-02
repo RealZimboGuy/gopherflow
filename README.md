@@ -181,20 +181,28 @@ defer resp.Body.Close()
         "github.com/RealZimboGuy/gopherflow_example/internal/workflows"
     )
     
-    func main() {
+func main() {
     
-        //you may do your own logger setup here or use this default one with slog
-        gopherflow.SetupLogger()
+    //you may do your own logger setup here or use this default one with slog
+    gopherflow.SetupLogger()
     
-        gopherflow.WorkflowRegistry = map[string]reflect.Type{
-            "DemoWorkflow":  reflect.TypeOf(workflows.DemoWorkflow{}),
-            "GetIpWorkflow": reflect.TypeOf(workflows.GetIpWorkflow{}),
+    gopherflow.WorkflowRegistry = map[string]func() core.Workflow{
+                "DemoWorkflow": func() core.Workflow {
+                     return &workflows.DemoWorkflow{}
+                },
+                "GetIpWorkflow": func() core.Workflow {
+                // You can inject dependencies here
+                    return &workflows.GetIpWorkflow{
+                    // HTTPClient: httpClient,
+                    // MyService: myService,
+                    }
+                },
         }
-		//uses the defaul ServeMux
-		app := gopherflow.Setup()
-
-		if err := app.Run(); err != nil {
-			slog.Error("Engine exited with error", "error", err)
-		}
+    //uses the defaul ServeMux
+    app := gopherflow.Setup()
+    
+    if err := app.Run(); err != nil {
+        slog.Error("Engine exited with error", "error", err)
     }
+}
 ```
