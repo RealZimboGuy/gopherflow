@@ -150,8 +150,8 @@ func (wc *WebController) inProgressTopHandler(w http.ResponseWriter, r *http.Req
 				State:          wf.State,
 				ExecutorGroup:  wf.ExecutorGroup,
 				NextActivation: getNextActivationString(wf),
-				Created:        wf.Created.Local().Format("2006-01-02 03:04:05"),
-				Modified:       wf.Modified.Local().Format("2006-01-02 03:04:05"),
+				Created:        wf.Created.Local().Format("2006-01-02 15:04:05"),
+				Modified:       wf.Modified.Local().Format("2006-01-02 15:04:05"),
 			})
 		}
 	}
@@ -192,8 +192,8 @@ func (wc *WebController) nextExecutionTopHandler(w http.ResponseWriter, r *http.
 				State:          wf.State,
 				ExecutorGroup:  wf.ExecutorGroup,
 				NextActivation: getNextActivationString(wf),
-				Created:        wf.Created.Local().Format("2006-01-02 03:04:05"),
-				Modified:       wf.Modified.Local().Format("2006-01-02 03:04:05"),
+				Created:        wf.Created.Local().Format("2006-01-02 15:04:05"),
+				Modified:       wf.Modified.Local().Format("2006-01-02 15:04:05"),
 			})
 		}
 	}
@@ -237,8 +237,8 @@ func (wc *WebController) definitionsHandler(w http.ResponseWriter, r *http.Reque
 		models = append(models, WorkflowDefinitionModel{
 			Name:      d.Name,
 			FlowChart: d.FlowChart,
-			Created:   d.Created.Local().Format("2006-01-02 03:04:05"),
-			Updated:   d.Updated.Local().Format("2006-01-02 03:04:05"),
+			Created:   d.Created.Local().Format("2006-01-02 15:04:05"),
+			Updated:   d.Updated.Local().Format("2006-01-02 15:04:05"),
 		})
 	}
 
@@ -310,7 +310,7 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 		StartedAt      string
 	}
 	// Format times safely
-	formatTS := func(t time.Time) string { return t.Local().Format("2006-01-02 03:04:05") }
+	formatTS := func(t time.Time) string { return t.Local().Format("2006-01-02 15:04:05") }
 	var nextAct = getNextActivationString(*wf)
 	var startedAt string
 	if wf.Started.Valid {
@@ -344,8 +344,8 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 			Name:        def.Name,
 			Description: def.Description,
 			FlowChart:   def.FlowChart,
-			Created:     def.Created.Local().Format("2006-01-02 03:04:05"),
-			Updated:     def.Updated.Local().Format("2006-01-02 03:04:05"),
+			Created:     def.Created.Local().Format("2006-01-02 15:04:05"),
+			Updated:     def.Updated.Local().Format("2006-01-02 15:04:05"),
 		}
 	}
 
@@ -363,7 +363,7 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 				Type:     a.Type,
 				Name:     a.Name,
 				Text:     a.Text,
-				DateTime: a.DateTime.Local().Format("2006-01-02 03:04:05"),
+				DateTime: a.DateTime.Local().Format("2006-01-02 15:04:05"),
 			})
 		}
 	}
@@ -464,8 +464,8 @@ func (wc *WebController) definitionByNameHandler(w http.ResponseWriter, r *http.
 		Name:        def.Name,
 		Description: def.Description,
 		FlowChart:   def.FlowChart,
-		Created:     def.Created.Local().Format("2006-01-02 03:04:05"),
-		Updated:     def.Updated.Local().Format("2006-01-02 03:04:05"),
+		Created:     def.Created.Local().Format("2006-01-02 15:04:05"),
+		Updated:     def.Updated.Local().Format("2006-01-02 15:04:05"),
 	}
 
 	// Build Overview rows: list all states from workflow and merge DB counts
@@ -688,8 +688,8 @@ func (wc *WebController) searchResultsHandler(w http.ResponseWriter, r *http.Req
 				State:          wf.State,
 				ExecutorGroup:  wf.ExecutorGroup,
 				NextActivation: nextAct,
-				Created:        wf.Created.Local().Format("2006-01-02 03:04:05"),
-				Modified:       wf.Modified.Local().Format("2006-01-02 03:04:05"),
+				Created:        wf.Created.Local().Format("2006-01-02 15:04:05"),
+				Modified:       wf.Modified.Local().Format("2006-01-02 15:04:05"),
 			})
 		}
 	}
@@ -775,7 +775,7 @@ func (wc *WebController) executorsHandler(w http.ResponseWriter, r *http.Request
 			ID:        e.ID,
 			Group:     "default", // grouping not modeled yet
 			Host:      e.Name,
-			StartedAt: e.Started.Local().Format("2006-01-02 03:04:05"),
+			StartedAt: e.Started.Local().Format("2006-01-02 15:04:05"),
 			LastAlive: friendlyTimeAgo(e.LastActive.Local()),
 			CssClass:  statusCssClass(e.LastActive.Local()),
 		})
