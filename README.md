@@ -30,7 +30,7 @@ This starts the demo application with a SQLite database, there are two workflows
         -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db\
         -v "$(pwd):/data"\
         --security-opt seccomp=unconfined \
-        juliangpurse/gopherflow:1.1.1
+        juliangpurse/gopherflow:1.2.0
 
 *note the --security-opt seccomp=unconfined  is required because of sqllite being run in a container*
 
@@ -54,7 +54,7 @@ refer to the example application:  https://github.com/RealZimboGuy/gopherflow-ex
 
 ### Specific details
 
-    go get github.com/RealZimboGuy/gopherflow@v1.1.1
+    go get github.com/RealZimboGuy/gopherflow@v1.2.0
 
 a struct that extends the base 
 ```go
@@ -142,7 +142,7 @@ return states
 }
 
 // Each method returns the next state
-func (m *GetIpWorkflow) Start() (*models.NextState, error) {
+func (m *GetIpWorkflow) Start(ctx context.Context) (*models.NextState, error) {
 slog.Info("Starting workflow")
 
 	return &models.NextState{
@@ -151,7 +151,7 @@ slog.Info("Starting workflow")
 	}, nil
 }
 
-func (m *GetIpWorkflow) StateGetIpData() (*models.NextState, error) {
+func (m *GetIpWorkflow) StateGetIpData(ctx context.Context) (*models.NextState, error) {
 resp, err := http.Get("http://ifconfig.io")
 if err != nil {
 return nil, err
@@ -182,7 +182,7 @@ defer resp.Body.Close()
     )
     
 func main() {
-    
+    ctx := context.Background() 
     //you may do your own logger setup here or use this default one with slog
     gopherflow.SetupLogger()
     
@@ -201,7 +201,7 @@ func main() {
     //uses the defaul ServeMux
     app := gopherflow.Setup()
     
-    if err := app.Run(); err != nil {
+    if err := app.Run(ctx); err != nil {
         slog.Error("Engine exited with error", "error", err)
     }
 }
