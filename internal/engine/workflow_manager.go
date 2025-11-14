@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -177,6 +178,37 @@ func registerWorkflowDefinitions(ctx context.Context, wm *WorkflowManager) {
 		flow := buildFlowChart(wm, name)
 		instance, _ := CreateWorkflowInstance(wm, name)
 		desc := fmt.Sprintf("%s", instance.Description())
+
+		for _, state := range instance.GetAllStates() {
+			if state.StateType == models.StateNormal ||
+				state.StateType == models.StateStart {
+				//need to ensure that this function on the workflow correctly only has the ctx as a parameter
+				typ := reflect.TypeOf(instance)
+				m, ok := typ.MethodByName(state.Name)
+				if !ok {
+					panic(fmt.Sprintf("method %s not found in workflow definition %s", state.Name, name))
+				}
+
+				// Method signatures in Go always include the receiver as the first param.
+				// So to enforce: func (w *Workflow) Foo(ctx context.Context)
+				// method.Type.NumIn() must be 2 (receiver + ctx)
+				if m.Type.NumIn() != 2 {
+					panic(fmt.Sprintf(
+						"method %s must have exactly one parameter: context.Context (found %d parameters)",
+						state.Name, m.Type.NumIn()-1,
+					))
+				}
+
+				ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
+				if m.Type.In(1) != ctxType {
+					panic(fmt.Sprintf(
+						"method %s must take context.Context as its only parameter",
+						state.Name,
+					))
+				}
+			}
+
+		}
 
 		if def == nil {
 			// Create new definition
