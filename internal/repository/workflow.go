@@ -131,24 +131,34 @@ func (r *WorkflowRepository) Save(wf *domain.Workflow) (int64, error) {
 	return wf.ID, err
 }
 
-func formatDateInDatabase(created time.Time) interface{} {
-
+func formatDateInDatabase(created time.Time) string {
 	if config.GetSystemSettingString(config.DATABASE_TYPE) == config.DATABASE_TYPE_SQLLITE {
 		return created.UTC().Format("2006-01-02 15:04:05.000")
 	}
-	return created
+	if config.GetSystemSettingString(config.DATABASE_TYPE) == config.DATABASE_TYPE_MYSQL {
+		return created.UTC().Format("2006-01-02 15:04:05.000000")
+	}
+	// PostgreSQL supports RFC3339
+	return created.UTC().Format(time.RFC3339Nano)
 
 }
 func formatDateInDatabaseNull(created sql.NullTime) interface{} {
-
 	if !created.Valid {
 		return nil
 	}
 
 	if config.GetSystemSettingString(config.DATABASE_TYPE) == config.DATABASE_TYPE_SQLLITE {
-		return created.Time.Format("2006-01-02 15:04:05.000")
+		// Format as string for SQLite
+		return created.Time.UTC().Format("2006-01-02 15:04:05.000")
 	}
-	return created
+
+	// MySQL also needs string format (without T and Z)
+	if config.GetSystemSettingString(config.DATABASE_TYPE) == config.DATABASE_TYPE_MYSQL {
+		return created.Time.UTC().Format("2006-01-02 15:04:05.000000")
+	}
+
+	// Return time.Time directly for PostgreSQL
+	return created.Time
 
 }
 

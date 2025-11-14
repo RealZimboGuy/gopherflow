@@ -70,7 +70,7 @@ func (c *WorkflowsController) handleCreateWorkflow(w http.ResponseWriter, r *htt
 	c.WorkflowManager.Wakeup()
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(createWorkflowResponse{ID: id})
 }
 
@@ -280,7 +280,7 @@ func (c *WorkflowsController) handleSearchWorkflows(w http.ResponseWriter, r *ht
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(searchResponse)
 		return
 	}

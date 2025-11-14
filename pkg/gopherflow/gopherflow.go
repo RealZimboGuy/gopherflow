@@ -1,10 +1,12 @@
 package gopherflow
 
 import (
+	"context"
 	"database/sql"
 	"io/fs"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -30,6 +32,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type ctxKey string
+
+const ExecutorId ctxKey = "executorId"
+
 var WorkflowRegistry map[string]func() core.Workflow
 
 // App wires together the workflow engine, repositories, and HTTP server.
@@ -43,6 +49,9 @@ type App struct {
 		Definitions *repository.WorkflowDefinitionRepository
 		Users       *repository.UserRepository
 	}
+}
+type logHandler struct {
+	slog.Handler
 }
 
 // Setup sets up the database, repositories, workflow manager, and HTTP mux.
@@ -91,17 +100,37 @@ func Setup() *App {
 }
 
 // Run starts the workflow engine and HTTP server.
-func (a *App) Run() error {
+func (a *App) Run(ctx context.Context) error {
 	// start engine in background
 	dur, _ := time.ParseDuration(config.GetSystemSettingString(config.ENGINE_CHECK_DB_INTERVAL))
-	go a.Manager.StartEngine(dur)
+	go a.Manager.StartEngine(ctx, dur)
 
 	addr := ":" + config.GetSystemSettingString(config.ENGINE_SERVER_WEB_PORT)
 	if v := os.Getenv("HTTP_ADDR"); v != "" {
 		addr = v
 	}
 	slog.Info("Starting HTTP server", "addr", addr)
-	return http.ListenAndServe(addr, nil)
+
+	server := &http.Server{
+		Addr:        addr,
+		BaseContext: func(net.Listener) context.Context { return ctx },
+	}
+
+	// Graceful shutdown
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			slog.Error("Server shutdown error", "error", err)
+		}
+	}()
+
+	err := server.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	return nil
 }
 
 func setupPostgresDatabase() *sql.DB {
@@ -126,6 +155,11 @@ func setupPostgresDatabase() *sql.DB {
 
 func setupSqlLiteDatabase() *sql.DB {
 	fileName := config.GetSystemSettingString(config.DATABASE_SQLLITE_FILE_NAME)
+	if fileName == "memory" {
+		// Use shared in-memory database, primarily for testing
+		fileName = "file::memory:?cache=shared"
+		slog.Warn("Using in-memory SQLite database")
+	}
 	if fileName == "" {
 		panic("DATABASE_SQLLITE_FILE_NAME must be set")
 	}
@@ -195,11 +229,43 @@ func runMigrationsFromEmbed(migrationsPath string, dbURL string) error {
 
 func SetupLogger() {
 	w := os.Stderr
-	_ = slog.New(tint.NewHandler(w, nil))
-	slog.SetDefault(slog.New(
-		tint.NewHandler(w, &tint.Options{
-			Level:      slog.LevelInfo,
-			TimeFormat: time.RFC3339Nano,
-		}),
-	))
+	baseHandler := tint.NewHandler(w, &tint.Options{
+		Level:      slog.LevelInfo,
+		TimeFormat: time.RFC3339Nano,
+	})
+	// set default logger to the tint handler first
+	slog.SetDefault(slog.New(baseHandler))
+	// wrap the base handler with our custom logHandler for extra fields
+	logger := slog.New(&logHandler{Handler: baseHandler})
+	slog.SetDefault(logger)
+}
+
+func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
+	// Map slog level to Cloud severity, useful for google cloud run
+	var sev string
+	switch {
+	case r.Level >= slog.LevelError:
+		sev = "ERROR"
+	case r.Level >= slog.LevelWarn:
+		sev = "WARNING"
+	case r.Level >= slog.LevelInfo:
+		sev = "INFO"
+	case r.Level >= slog.LevelDebug:
+		sev = "DEBUG"
+	default:
+		sev = "DEFAULT"
+	}
+
+	// Add Cloud Logging–compatible field
+	r.AddAttrs(slog.String("severity", sev))
+
+	// Try to extract request ID from context
+	if reqID := ctx.Value(ExecutorId); reqID != nil {
+		if s, ok := reqID.(string); ok && s != "" {
+			r.AddAttrs(slog.String("executorId", s))
+		}
+	}
+
+	// Call the wrapped handler
+	return h.Handler.Handle(ctx, r)
 }

@@ -8,18 +8,36 @@ import (
 	"net/http"
 )
 
-func DecodeJSONBody[T any](r *http.Request) (*T, error) {
+func DecodeJSONBody[T any](r *http.Request) (T, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read body error: %w", err)
+		var zero T
+		return zero, fmt.Errorf("read body error: %w", err)
 	}
 	defer r.Body.Close()
 
 	var data T
 	if err := json.Unmarshal(body, &data); err != nil {
-		return nil, fmt.Errorf("json unmarshal error: %w", err)
+		var zero T
+		return zero, fmt.Errorf("json unmarshal error: %w", err)
 	}
-	return &data, nil
+	return data, nil
+}
+
+func DecodeJSONBodyResponse[T any](r *http.Response) (T, error) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		var zero T
+		return zero, fmt.Errorf("read body error: %w", err)
+	}
+	defer r.Body.Close()
+
+	var data T
+	if err := json.Unmarshal(body, &data); err != nil {
+		var zero T
+		return zero, fmt.Errorf("json unmarshal error: %w", err)
+	}
+	return data, nil
 }
 
 func WriteJSONResponse[T any](w http.ResponseWriter, status int, data T) {

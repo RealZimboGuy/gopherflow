@@ -1,6 +1,7 @@
 package workflows
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -74,7 +75,7 @@ func (m *DemoWorkflow) GetAllStates() []models.WorkflowState {
 }
 
 // Each method returns the next state
-func (m *DemoWorkflow) Init() (*models.NextState, error) {
+func (m *DemoWorkflow) Init(ctx context.Context) (*models.NextState, error) {
 	slog.Info("Starting workflow")
 	m.StateVariables[VAR_AGE] = "33"
 	m.StateVariables[VAR_NAME] = "Julian"
@@ -91,7 +92,7 @@ func (m *DemoWorkflow) Init() (*models.NextState, error) {
 	}, nil
 }
 
-func (m *DemoWorkflow) Review() (*models.NextState, error) {
+func (m *DemoWorkflow) Review(ctx context.Context) (*models.NextState, error) {
 	slog.Info("Reviewing workflow, changing name")
 	m.StateVariables[VAR_NAME] = "Julian2"
 	//return an error
@@ -111,7 +112,7 @@ func (m *DemoWorkflow) Review() (*models.NextState, error) {
 	}, nil
 }
 
-func (m *DemoWorkflow) Approve() (*models.NextState, error) {
+func (m *DemoWorkflow) Approve(ctx context.Context) (*models.NextState, error) {
 	slog.Info("Approving workflow")
 	// print the name state var
 	slog.Info("State Variables", "vars", m.StateVariables)

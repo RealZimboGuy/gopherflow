@@ -1,6 +1,8 @@
 package workflows
 
 import (
+	"context"
+
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
@@ -61,15 +63,15 @@ func (m *GetIpWorkflow) GetAllStates() []models.WorkflowState {
 }
 
 // Each method returns the next state
-func (m *GetIpWorkflow) Init() (*models.NextState, error) {
-	slog.Info("Starting workflow")
+func (m *GetIpWorkflow) Init(ctx context.Context) (*models.NextState, error) {
+	slog.InfoContext(ctx, "Starting workflow")
 
 	return &models.NextState{
 		Name: StateGetIpData,
 	}, nil
 }
 
-func (m *GetIpWorkflow) StateGetIpData() (*models.NextState, error) {
+func (m *GetIpWorkflow) StateGetIpData(ctx context.Context) (*models.NextState, error) {
 	resp, err := http.Get("http://ifconfig.io")
 	if err != nil {
 		return nil, err

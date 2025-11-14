@@ -2,9 +2,10 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"log/slog"
 	"net/http"
+
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
 )
 
 type ExecutorsController struct {
@@ -39,7 +40,7 @@ func (c *ExecutorsController) handleGetExecutors(w http.ResponseWriter, r *http.
 	if results != nil {
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(results)
 		return
 	}

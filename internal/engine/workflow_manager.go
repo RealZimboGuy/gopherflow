@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -79,16 +80,16 @@ func NewWorkflowManager(workflowRepo *repository.WorkflowRepository, workflowAct
 }
 
 // StartEngine starts polling for new workflows at the given interval
-func (wm *WorkflowManager) StartEngine(pollInterval time.Duration) {
+func (wm *WorkflowManager) StartEngine(ctx context.Context, pollInterval time.Duration) {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
 	// Register this executor instance
-	registerExecutorInstance(wm)
+	registerExecutorInstance(ctx, wm)
 
-	registerWorkflowDefinitions(wm)
+	registerWorkflowDefinitions(ctx, wm)
 
-	go startWorkflowRepairService(wm)
+	go startWorkflowRepairService(ctx, wm)
 
 	// Initialize workflow queue size from system setting ENGINE_BATCH_SIZE
 	queueSize := config.GetSystemSettingInteger(config.ENGINE_BATCH_SIZE)
@@ -100,7 +101,10 @@ func (wm *WorkflowManager) StartEngine(pollInterval time.Duration) {
 	// log starting and number of workers
 	slog.Info("Starting workflow engine", "workers", config.GetSystemSettingInteger(config.ENGINE_EXECUTOR_SIZE), "queue_size", queueSize)
 	for i := 0; i < config.GetSystemSettingInteger(config.ENGINE_EXECUTOR_SIZE); i++ {
-		go Worker(i, wm.executorID, *wm.WorkflowRepo, *wm.WorkflowActionRepo, workflowQueue)
+		//create a new context for each worker
+		workerContext, _ := context.WithCancel(ctx)
+		workerContext = context.WithValue(ctx, "worker_id", i)
+		go Worker(workerContext, i, wm.executorID, *wm.WorkflowRepo, *wm.WorkflowActionRepo, workflowQueue)
 	}
 
 	slog.Info("Workflow engine started", "poll_interval", pollInterval.String())
@@ -118,7 +122,7 @@ func (wm *WorkflowManager) StartEngine(pollInterval time.Duration) {
 
 // responsible for finding workflows that might have crashed half way and waking them up again
 // these workflows will be in a state of SCHEDULED or EXECUTING and the executor will be last active more than 5 minutes ago
-func startWorkflowRepairService(wm *WorkflowManager) {
+func startWorkflowRepairService(ctx context.Context, wm *WorkflowManager) {
 	dur, _ := time.ParseDuration(config.GetSystemSettingString(config.ENGINE_STUCK_WORKFLOWS_INTERVAL))
 	ticker := time.NewTicker(dur)
 	defer ticker.Stop()
@@ -160,7 +164,7 @@ func startWorkflowRepairService(wm *WorkflowManager) {
 
 }
 
-func registerWorkflowDefinitions(wm *WorkflowManager) {
+func registerWorkflowDefinitions(ctx context.Context, wm *WorkflowManager) {
 
 	for name := range *wm.WorkflowRegistry {
 		def, err := wm.DefinitionRepo.FindByName(name)
@@ -259,7 +263,7 @@ func buildFlowChart(wm *WorkflowManager, name string) string {
 	return sb.String()
 }
 
-func registerExecutorInstance(wm *WorkflowManager) {
+func registerExecutorInstance(ctx context.Context, wm *WorkflowManager) {
 	name := config.GetSystemSettingString("EXECUTOR_NAME")
 	if name == "" {
 		hostname, err := os.Hostname()
@@ -306,7 +310,7 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 	for _, wf := range *workflows {
 
 		// first we mark the workflow as running
-		slog.Info("Marking workflow as scheduled for execution", "business_key", wf.BusinessKey)
+		slog.Info("Marking workflow as scheduled for execution", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 		exclusiveLock := wm.WorkflowRepo.MarkWorkflowAsScheduledForExecution(wf.ID, wm.executorID, wf.Modified)
 
 		if exclusiveLock == false {
@@ -319,12 +323,12 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 		// create an instance of the workflow based on the type
 		instance, _ := createWorkflow(wm, wf.WorkflowType)
 
-		slog.Info("Add workflow to execution channel", "business_key", wf.BusinessKey)
+		slog.Info("Add workflow to execution channel", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 		ptr := instance.(core.Workflow)
 		ptr.Setup(&wf)
 		workflowQueue <- ptr
 
-		slog.Info("Running workflow", "business_key", wf.BusinessKey)
+		slog.Info("Running workflow", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 		// RunWorkflow(wf) // call your workflow runner here
 	}
 

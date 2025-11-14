@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -14,9 +15,9 @@ import (
 )
 
 // Engine runs a workflow
-func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string) {
+func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string) {
 
-	slog.Info("Running workflow", "workflow_id", w.GetWorkflowData().ID, "worker_id", workerID)
+	slog.InfoContext(ctx, "Running workflow", "workflow_id", w.GetWorkflowData().ID, "worker_id", workerID)
 	err := r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "EXECUTING")
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "EXECUTING", Name: "EXECUTING", Text: "EXECUTING", DateTime: time.Now()})
 
@@ -54,7 +55,7 @@ func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository
 			}
 		}
 		if isEndState {
-			if processWorflowCompleted(w, r, wa, executorID, workerID, currentState) {
+			if processWorflowCompleted(ctx, w, r, wa, executorID, workerID, currentState) {
 				return
 			}
 			break
@@ -66,7 +67,7 @@ func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository
 		}
 
 		// Call the method and get the next state
-		results := method.Call(nil)
+		results := method.Call([]reflect.Value{reflect.ValueOf(ctx)})
 		if len(results) != 2 || !(results[0].Type().AssignableTo(reflect.TypeOf(models.NextState{})) || results[0].Type().AssignableTo(reflect.TypeOf(&models.NextState{}))) {
 			panic(fmt.Sprintf("method %s should return (NextState or *NextState, error)", currentState))
 		}
@@ -81,7 +82,7 @@ func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository
 			callErr = results[1].Interface().(error)
 		}
 		if callErr != nil {
-			processStateExecutionError(w, r, wa, executorID, workerID, currentState, callErr)
+			processStateExecutionError(ctx, w, r, wa, executorID, workerID, currentState, callErr)
 			return
 		}
 
@@ -106,18 +107,18 @@ func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository
 			}
 		}
 
-		slog.Info("Transitioning state", "from", currentState, "to", nextState, "worker_id", workerID)
+		slog.InfoContext(ctx, "Transitioning state", "from", currentState, "to", nextState, "worker_id", workerID)
 		_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "TRANSITION", Name: currentState, Text: "From " + currentState + " to " + nextState, DateTime: time.Now()})
 		currentState = nextState
 
-		slog.Info("Updating workflow state", "workflow_id", w.GetWorkflowData().ID, "state", currentState, "worker_id", workerID)
+		slog.InfoContext(ctx, "Updating workflow state", "workflow_id", w.GetWorkflowData().ID, "state", currentState, "worker_id", workerID)
 		//this also resets the retry count
 		err := r.UpdateState(w.GetWorkflowData().ID, currentState)
 		if err != nil {
 			return
 		}
 
-		if compareAndSaveWorkflowStateVars(w, r, workerID) {
+		if compareAndSaveWorkflowStateVars(ctx, w, r, workerID) {
 			return
 		}
 
@@ -131,7 +132,7 @@ func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository
 		// if the next execution is a valid date and time in the future then set it and break processing
 		if !nextExecution.IsZero() {
 			//if nextExecution.After(time.Now()) { // no need, if its in the past it will just run on the next pick up
-			slog.Info("Setting next activation (specific)", "workflow_id", w.GetWorkflowData().ID, "next_activation", nextExecution, "worker_id", workerID)
+			slog.InfoContext(ctx, "Setting next activation (specific)", "workflow_id", w.GetWorkflowData().ID, "next_activation", nextExecution, "worker_id", workerID)
 			if err := r.UpdateNextActivationSpecific(w.GetWorkflowData().ID, nextExecution); err != nil {
 				slog.Error("Error updating next activation", "error", err, "worker_id", workerID)
 				return
@@ -142,7 +143,7 @@ func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository
 		}
 		nextExecutionOffset := results[0].Interface().(*models.NextState).NextExecutionOffset
 		if nextExecutionOffset != "" {
-			slog.Info("Setting next activation (offset)", "workflow_id", w.GetWorkflowData().ID, "offset", nextExecutionOffset, "worker_id", workerID)
+			slog.InfoContext(ctx, "Setting next activation (offset)", "workflow_id", w.GetWorkflowData().ID, "offset", nextExecutionOffset, "worker_id", workerID)
 			if err := r.UpdateNextActivationOffset(w.GetWorkflowData().ID, nextExecutionOffset); err != nil {
 				slog.Error("Error updating next activation", "error", err, "worker_id", workerID)
 				return
@@ -160,12 +161,12 @@ func RunWorkflow(w core.Workflow, r repository.WorkflowRepository, wa repository
 		slog.Error("Error clearing executor id", "error", err, "worker_id", workerID)
 		return
 	}
-	slog.Info("Workflow finished", "worker_id", workerID)
+	slog.InfoContext(ctx, "Workflow finished", "worker_id", workerID)
 
 }
 
-func processWorflowCompleted(w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string) bool {
-	slog.Info("Workflow completed", "worker_id", workerID)
+func processWorflowCompleted(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string) bool {
+	slog.InfoContext(ctx, "Workflow completed", "worker_id", workerID)
 	err := r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "FINISHED")
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "END", Name: currentState, Text: "workflow complete", DateTime: time.Now()})
 	if err != nil {
@@ -175,7 +176,7 @@ func processWorflowCompleted(w core.Workflow, r repository.WorkflowRepository, w
 	return false
 }
 
-func processStateExecutionError(w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string, callErr error) {
+func processStateExecutionError(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string, callErr error) {
 	slog.Error("Error executing state method", "state", currentState, "error", callErr, "worker_id", workerID)
 	_, _ = wa.Save(&domain.WorkflowAction{
 		WorkflowID:     w.GetWorkflowData().ID,
@@ -195,7 +196,7 @@ func processStateExecutionError(w core.Workflow, r repository.WorkflowRepository
 		return
 	}
 
-	if compareAndSaveWorkflowStateVars(w, r, workerID) {
+	if compareAndSaveWorkflowStateVars(ctx, w, r, workerID) {
 		return
 	}
 
@@ -211,18 +212,18 @@ func processStateExecutionError(w core.Workflow, r repository.WorkflowRepository
 	return
 }
 
-func compareAndSaveWorkflowStateVars(w core.Workflow, r repository.WorkflowRepository, workerID string) bool {
+func compareAndSaveWorkflowStateVars(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, workerID string) bool {
 	jsonString, _ := json.Marshal(w.GetStateVariables())
 
 	if string(jsonString) != w.GetWorkflowData().StateVars.String {
-		slog.Info("Updating workflow variables", "workflow_id", w.GetWorkflowData().ID, "state_vars", string(jsonString), "worker_id", workerID)
+		slog.InfoContext(ctx, "Updating workflow variables", "workflow_id", w.GetWorkflowData().ID, "state_vars", string(jsonString), "worker_id", workerID)
 		err2 := r.SaveWorkflowVariables(w.GetWorkflowData().ID, string(jsonString))
 		if err2 != nil {
 			slog.Error("Error saving workflow variables", "error", err2, "worker_id", workerID)
 			return true
 		}
 	} else {
-		slog.Info("Workflow variables unchanged", "worker_id", workerID)
+		slog.InfoContext(ctx, "Workflow variables unchanged", "worker_id", workerID)
 	}
 	return false
 }
