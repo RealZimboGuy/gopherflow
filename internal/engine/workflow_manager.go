@@ -200,8 +200,8 @@ func registerWorkflowDefinitions(ctx context.Context, wm *WorkflowManager) {
 				// method.Type.NumIn() must be 2 (receiver + ctx)
 				if m.Type.NumIn() != 2 {
 					panic(fmt.Sprintf(
-						"method %s must have exactly one parameter: context.Context (found %d parameters)",
-						state.Name, m.Type.NumIn()-1,
+						"Workflow:%s method:%s must have exactly one parameter: context.Context (found %d parameters)",
+						name, state.Name, m.Type.NumIn()-1,
 					))
 				}
 

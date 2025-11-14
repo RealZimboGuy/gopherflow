@@ -1,4 +1,4 @@
-VERSION := "1.2.0"
+VERSION := "1.2.1"
 # just build git push
 update-version:
     @echo "Updating version to {{VERSION}}"
