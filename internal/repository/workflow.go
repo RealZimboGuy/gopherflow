@@ -310,7 +310,7 @@ func (r *WorkflowRepository) UpdateNextActivationOffset(id int64, offset string)
 		fmt.Sscanf(offset, "%d", &mins)
 		dur = time.Duration(mins) * time.Minute
 	}
-	next := time.Now().Add(dur)
+	next := time.Now().UTC().Add(dur)
 	query := `
 		UPDATE workflow
 		SET status = 'IN_PROGRESS', next_activation = ` + placeholder(1) + `, modified = ` + nowFunc() + `
@@ -417,7 +417,6 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 		FROM workflow
 		WHERE modified < NOW() - (` + placeholder(1) + ` || ' minutes')::interval
 		  AND status IN ('SCHEDULED', 'EXECUTING', 'IN_PROGRESS', 'LOCK')
-		  AND executor_id IS NOT NULL
 		  AND executor_group = ` + placeholder(2) + `
 		  AND executor_id NOT IN (
 		      SELECT id
@@ -434,7 +433,6 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 		FROM workflow
 		WHERE modified < ` + placeholder(1) + `
 		  AND status IN ('SCHEDULED', 'EXECUTING', 'IN_PROGRESS', 'LOCK')
-		  AND executor_id IS NOT NULL
 		  AND executor_group = ` + placeholder(2) + `
 		  AND executor_id NOT IN (
 		      SELECT id
@@ -482,7 +480,7 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 		// minutesRepair is a string like "5" or "5 minutes"; extract leading integer minutes
 		mins := 0
 		fmt.Sscanf(minutesRepair, "%d", &mins)
-		cutoff := time.Now().Add(-time.Duration(mins) * time.Minute)
+		cutoff := time.Now().UTC().Add(-time.Duration(mins) * time.Minute)
 		lastActiveCutoff := cutoff
 		rows, err := r.db.Query(query, cutoff, executorGroup, lastActiveCutoff, limit)
 		if err != nil {

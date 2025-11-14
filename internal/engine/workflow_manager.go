@@ -151,13 +151,19 @@ func startWorkflowRepairService(ctx context.Context, wm *WorkflowManager) {
 						ExecutionCount: 1,
 						Type:           "REPAIRED",
 						Name:           "REPAIRED",
-						Text:           "Repaired and scheduled, previous executor was: " + fmt.Sprint(previousExecutorId),
+						Text:           "Repaired and scheduled, previous executor was: " + fmt.Sprint(previousExecutorId.String),
 						DateTime:       time.Now(),
 					})
-					instance, _ := createWorkflow(wm, wf.WorkflowType)
-					ptr := instance.(core.Workflow)
-					ptr.Setup(&wf)
-					workflowQueue <- ptr
+					//set the workflow to next execute now
+					err := wm.WorkflowRepo.UpdateNextActivationSpecific(wf.ID, time.Now())
+					if err != nil {
+						slog.ErrorContext(ctx, "Failed to repair update workflow next activation", wf.ID, err)
+					}
+					err = wm.WorkflowRepo.ClearExecutorId(wf.ID)
+					if err != nil {
+						slog.ErrorContext(ctx, "Failed to repair clear executor id", wf.ID, err)
+					}
+
 				}
 			}
 		}
@@ -330,6 +336,12 @@ func registerExecutorInstance(ctx context.Context, wm *WorkflowManager) {
 func (wm *WorkflowManager) pollAndRunWorkflows() {
 
 	slog.Debug("Polling for new workflows")
+
+	if len(workflowQueue) >= config.GetSystemSettingInteger(config.ENGINE_BATCH_SIZE) {
+		slog.Warn("workflow queue full, skipping pollAndRunWorkflows, possibly stuck workflows or long running workflows")
+		return
+	}
+
 	workflows, err := wm.WorkflowRepo.FindPendingWorkflows(
 		config.GetSystemSettingInteger(config.ENGINE_BATCH_SIZE),
 		config.GetSystemSettingString(config.ENGINE_EXECUTOR_GROUP),
