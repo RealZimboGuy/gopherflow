@@ -52,10 +52,11 @@ type App struct {
 }
 type logHandler struct {
 	slog.Handler
+	Clock core.Clock
 }
 
 // Setup sets up the database, repositories, workflow manager, and HTTP mux.
-func Setup() *App {
+func Setup(clock core.Clock) *App {
 	databaseType := config.GetSystemSettingString(config.DATABASE_TYPE)
 	if databaseType == "" || (databaseType != config.DATABASE_TYPE_POSTGRES &&
 		databaseType != config.DATABASE_TYPE_MYSQL &&
@@ -76,11 +77,11 @@ func Setup() *App {
 	app := &App{DB: db}
 
 	// Repositories
-	app.Repos.Workflows = repository.NewWorkflowRepository(db)
-	app.Repos.Actions = repository.NewWorkflowActionRepository(db)
-	app.Repos.Executors = repository.NewExecutorRepository(db)
-	app.Repos.Definitions = repository.NewWorkflowDefinitionRepository(db)
-	app.Repos.Users = repository.NewUserRepository(db)
+	app.Repos.Workflows = repository.NewWorkflowRepository(db, clock)
+	app.Repos.Actions = repository.NewWorkflowActionRepository(db, clock)
+	app.Repos.Executors = repository.NewExecutorRepository(db, clock)
+	app.Repos.Definitions = repository.NewWorkflowDefinitionRepository(db, clock)
+	app.Repos.Users = repository.NewUserRepository(db, clock)
 
 	// Workflows manager
 	app.Manager = engine.NewWorkflowManager(
@@ -89,6 +90,7 @@ func Setup() *App {
 		app.Repos.Executors,
 		app.Repos.Definitions,
 		&WorkflowRegistry,
+		clock,
 	)
 
 	controllers.NewWorkflowsController(app.Repos.Workflows, app.Repos.Actions, app.Manager, app.Repos.Users).RegisterRoutes()
@@ -124,6 +126,7 @@ func (a *App) Run(ctx context.Context) error {
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			slog.Error("Server shutdown error", "error", err)
 		}
+		a.Shutdown()
 	}()
 
 	err := server.ListenAndServe()
@@ -131,6 +134,17 @@ func (a *App) Run(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (a *App) Shutdown() {
+
+	//remove any global setups to clean up resources
+	WorkflowRegistry = make(map[string]func() core.Workflow)
+	a.DB.Close()
+	slog.Info("DB connection closed")
+	//remove any global registered routes
+	http.DefaultServeMux = new(http.ServeMux)
+	slog.Info("Shutdown complete")
 }
 
 func setupPostgresDatabase() *sql.DB {
@@ -227,45 +241,51 @@ func runMigrationsFromEmbed(migrationsPath string, dbURL string) error {
 	return nil
 }
 
-func SetupLogger() {
+func SetupLogger(clock core.Clock) {
 	w := os.Stderr
 	baseHandler := tint.NewHandler(w, &tint.Options{
 		Level:      slog.LevelInfo,
-		TimeFormat: time.RFC3339Nano,
+		TimeFormat: "",
 	})
 	// set default logger to the tint handler first
 	slog.SetDefault(slog.New(baseHandler))
 	// wrap the base handler with our custom logHandler for extra fields
-	logger := slog.New(&logHandler{Handler: baseHandler})
+	logger := slog.New(&logHandler{Handler: baseHandler, Clock: clock})
 	slog.SetDefault(logger)
 }
 
 func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
 	// Map slog level to Cloud severity, useful for google cloud run
+	// Clone so we don't mutate the original record (handlers may share it).
+	r2 := r.Clone()
+
+	// Replace the internal timestamp with your accelerated clock.
+	r2.Time = h.Clock.Now()
+
 	var sev string
 	switch {
-	case r.Level >= slog.LevelError:
+	case r2.Level >= slog.LevelError:
 		sev = "ERROR"
-	case r.Level >= slog.LevelWarn:
+	case r2.Level >= slog.LevelWarn:
 		sev = "WARNING"
-	case r.Level >= slog.LevelInfo:
+	case r2.Level >= slog.LevelInfo:
 		sev = "INFO"
-	case r.Level >= slog.LevelDebug:
+	case r2.Level >= slog.LevelDebug:
 		sev = "DEBUG"
 	default:
 		sev = "DEFAULT"
 	}
 
 	// Add Cloud Logging–compatible field
-	r.AddAttrs(slog.String("severity", sev))
+	r2.AddAttrs(slog.String("severity", sev))
 
 	// Try to extract request ID from context
 	if reqID := ctx.Value(ExecutorId); reqID != nil {
 		if s, ok := reqID.(string); ok && s != "" {
-			r.AddAttrs(slog.String("executorId", s))
+			r2.AddAttrs(slog.String("executorId", s))
 		}
 	}
 
 	// Call the wrapped handler
-	return h.Handler.Handle(ctx, r)
+	return h.Handler.Handle(ctx, r2)
 }

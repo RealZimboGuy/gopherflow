@@ -4,16 +4,18 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 // UserRepository provides persistence methods for the users table.
 type UserRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	clock core.Clock
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *sql.DB, clock core.Clock) *UserRepository {
+	return &UserRepository{db: db, clock: clock}
 }
 
 // Save inserts a new user and returns its generated id.
@@ -21,7 +23,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 func (r *UserRepository) Save(u *domain.User) (int64, error) {
 	// Ensure created timestamp is set if not valid
 	if !u.Created.Valid {
-		u.Created = sql.NullTime{Time: time.Now(), Valid: true}
+		u.Created = sql.NullTime{Time: r.clock.Now().UTC(), Valid: true}
 	}
 
 	base := `

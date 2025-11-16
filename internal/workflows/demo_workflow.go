@@ -24,6 +24,7 @@ const VAR_AGE = "age"
 
 type DemoWorkflow struct {
 	core.BaseWorkflow
+	Clock core.Clock
 }
 
 type EnrollmentStruct struct {
@@ -103,7 +104,7 @@ func (m *DemoWorkflow) Review(ctx context.Context) (*models.NextState, error) {
 
 	//block for 20 seconds
 	fmt.Println("Sleeping for 200 seconds")
-	time.Sleep(200 * time.Second)
+	m.Clock.Sleep(200 * time.Second)
 
 	//wait 30 seconds
 	return &models.NextState{

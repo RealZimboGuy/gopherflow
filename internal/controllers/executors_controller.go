@@ -28,6 +28,7 @@ func (c *ExecutorsController) handleGetExecutors(w http.ResponseWriter, r *http.
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	slog.Info("GetExecutors called")
 
 	//if the external id is a duplicate, we return the existing workflow
 	results, err := c.ExecutorsRepo.GetExecutorsByLastActive(20)

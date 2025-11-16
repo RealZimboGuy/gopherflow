@@ -4,16 +4,18 @@ import (
 	"database/sql"
 	"log/slog"
 
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 // WorkflowActionRepository provides methods to persist and query workflow action records.
 type WorkflowActionRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	clock core.Clock
 }
 
-func NewWorkflowActionRepository(db *sql.DB) *WorkflowActionRepository {
-	return &WorkflowActionRepository{db: db}
+func NewWorkflowActionRepository(db *sql.DB, clock core.Clock) *WorkflowActionRepository {
+	return &WorkflowActionRepository{db: db, clock: clock}
 }
 
 // Save inserts a new workflow action and returns its ID.

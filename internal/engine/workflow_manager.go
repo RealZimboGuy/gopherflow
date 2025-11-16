@@ -26,6 +26,7 @@ type WorkflowManager struct {
 	DefinitionRepo     *repository.WorkflowDefinitionRepository
 	executorID         int64
 	wakeup             chan struct{}
+	clock              core.Clock
 }
 
 // ListWorkflowDefinitions exposes repository list for web/API layers.
@@ -69,7 +70,7 @@ func (wm *WorkflowManager) DefinitionOverview(workflowType string) ([]repository
 }
 
 func NewWorkflowManager(workflowRepo *repository.WorkflowRepository, workflowActionRepo *repository.WorkflowActionRepository, executorRepo *repository.ExecutorRepository,
-	definitionRepo *repository.WorkflowDefinitionRepository, WorkflowRegistry *map[string]func() core.Workflow) *WorkflowManager {
+	definitionRepo *repository.WorkflowDefinitionRepository, WorkflowRegistry *map[string]func() core.Workflow, clock core.Clock) *WorkflowManager {
 	return &WorkflowManager{
 		WorkflowRegistry:   WorkflowRegistry,
 		WorkflowRepo:       workflowRepo,
@@ -77,6 +78,7 @@ func NewWorkflowManager(workflowRepo *repository.WorkflowRepository, workflowAct
 		executorRepo:       executorRepo,
 		DefinitionRepo:     definitionRepo,
 		wakeup:             make(chan struct{}, 1),
+		clock:              clock,
 	}
 }
 

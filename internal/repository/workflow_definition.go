@@ -4,15 +4,17 @@ import (
 	"database/sql"
 
 	"github.com/RealZimboGuy/gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 type WorkflowDefinitionRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	clock core.Clock
 }
 
-func NewWorkflowDefinitionRepository(db *sql.DB) *WorkflowDefinitionRepository {
-	return &WorkflowDefinitionRepository{db: db}
+func NewWorkflowDefinitionRepository(db *sql.DB, clock core.Clock) *WorkflowDefinitionRepository {
+	return &WorkflowDefinitionRepository{db: db, clock: clock}
 }
 
 // Save inserts a new workflow definition or updates an existing one by name.

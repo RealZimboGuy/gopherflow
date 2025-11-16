@@ -15,6 +15,7 @@ import (
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	"github.com/RealZimboGuy/gopherflow/test/integration"
 )
 
 var portBase int32 = 9018 // starting port number (can be anything safe)
@@ -28,16 +29,19 @@ func TestStartupAppAndGetExecutor(t *testing.T) {
 	SetupSqlLiteTestInstance(t.Context())
 	//defer container.Terminate(t.Context())
 
-	gopherflow.SetupLogger()
+	clock := integration.NewFakeClock(time.Now())
+	gopherflow.SetupLogger(clock)
 	gopherflow.WorkflowRegistry = map[string]func() core.Workflow{
 		"DemoWorkflow": func() core.Workflow {
-			return &workflows.DemoWorkflow{}
+			return &workflows.DemoWorkflow{
+				Clock: clock,
+			}
 		},
 		"GetIpWorkflow": func() core.Workflow {
 			return &workflows.GetIpWorkflow{}
 		},
 	}
-	app := gopherflow.Setup()
+	app := gopherflow.Setup(clock)
 
 	// Start the app in a goroutine so it doesn't block
 	go func() {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/RealZimboGuy/gopherflow/internal/config"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 
@@ -16,7 +17,8 @@ import (
 )
 
 type WorkflowRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	clock core.Clock
 }
 
 // WorkflowOverviewRow holds grouped counts by executor_group and workflow_type
@@ -44,8 +46,8 @@ const ALL_COLUMNS = ` id, status, execution_count, retry_count, created, modifie
 		       next_activation, started, executor_id, executor_group,
 		       workflow_type, external_id, business_key, state, state_vars `
 
-func NewWorkflowRepository(db *sql.DB) *WorkflowRepository {
-	return &WorkflowRepository{db: db}
+func NewWorkflowRepository(db *sql.DB, clock core.Clock) *WorkflowRepository {
+	return &WorkflowRepository{db: db, clock: clock}
 }
 
 func (r *WorkflowRepository) FindByID(id int64) (*domain.Workflow, error) {
@@ -290,16 +292,16 @@ func (r *WorkflowRepository) UpdateNextActivationSpecific(id int64, next time.Ti
 	return err
 }
 func (r *WorkflowRepository) UpdateNextActivationOffset(id int64, offset string) error {
-	if supportsReturning() {
-		query := `
-			UPDATE workflow
-			SET status = 'IN_PROGRESS', next_activation = NOW() + ` + placeholder(1) + `::interval,
-			    modified = ` + nowFunc() + `
-			WHERE id = ` + placeholder(2) + `
-		`
-		_, err := r.db.Exec(query, offset, id)
-		return err
-	}
+	//if supportsReturning() {
+	//	query := `
+	//		UPDATE workflow
+	//		SET status = 'IN_PROGRESS', next_activation = NOW() + ` + placeholder(1) + `::interval,
+	//		    modified = ` + nowFunc() + `
+	//		WHERE id = ` + placeholder(2) + `
+	//	`
+	//	_, err := r.db.Exec(query, offset, id)
+	//	return err
+	//}
 	// Non-Postgres: compute next_activation in Go
 	var dur time.Duration
 	var err error
@@ -411,24 +413,24 @@ func (r *WorkflowRepository) FindByExternalId(id string) (*domain.Workflow, erro
 
 func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGroup string, limit int) (*[]domain.Workflow, error) {
 	var query string
-	if supportsReturning() { // Postgres flavor using interval
-		query = `
-		SELECT ` + ALL_COLUMNS + `
-		FROM workflow
-		WHERE modified < NOW() - (` + placeholder(1) + ` || ' minutes')::interval
-		  AND status IN ('SCHEDULED', 'EXECUTING', 'IN_PROGRESS', 'LOCK')
-		  AND executor_group = ` + placeholder(2) + `
-		  AND executor_id NOT IN (
-		      SELECT id
-		      FROM executors
-		      WHERE last_active > NOW() - (` + placeholder(1) + ` || ' minutes')::interval
-		  )
-		ORDER BY next_activation ASC
-		LIMIT ` + placeholder(3) + `
-		`
-	} else {
-		// Generic flavor without interval math: compare against parameterized cutoff times
-		query = `
+	//if supportsReturning() { // Postgres flavor using interval
+	//	query = `
+	//	SELECT ` + ALL_COLUMNS + `
+	//	FROM workflow
+	//	WHERE modified < NOW() - (` + placeholder(1) + ` || ' minutes')::interval
+	//	  AND status IN ('SCHEDULED', 'EXECUTING', 'IN_PROGRESS', 'LOCK')
+	//	  AND executor_group = ` + placeholder(2) + `
+	//	  AND executor_id NOT IN (
+	//	      SELECT id
+	//	      FROM executors
+	//	      WHERE last_active > NOW() - (` + placeholder(1) + ` || ' minutes')::interval
+	//	  )
+	//	ORDER BY next_activation ASC
+	//	LIMIT ` + placeholder(3) + `
+	//	`
+	//} else {
+	// Generic flavor without interval math: compare against parameterized cutoff times
+	query = `
 		SELECT ` + ALL_COLUMNS + `
 		FROM workflow
 		WHERE modified < ` + placeholder(1) + `
@@ -442,78 +444,78 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 		ORDER BY next_activation ASC
 		LIMIT ` + placeholder(4) + `
 		`
-		// For non-Postgres, we will shift args: compute cutoffs in Go: now - minutesRepair minutes
+	// For non-Postgres, we will shift args: compute cutoffs in Go: now - minutesRepair minutes
+	//}
+	//if supportsReturning() {
+	//	rows, err := r.db.Query(query, minutesRepair, executorGroup, limit)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	defer rows.Close()
+	//	var workflows []domain.Workflow
+	//	for rows.Next() {
+	//		var wf domain.Workflow
+	//		err := rows.Scan(
+	//			&wf.ID,
+	//			&wf.Status,
+	//			&wf.ExecutionCount,
+	//			&wf.RetryCount,
+	//			&wf.Created,
+	//			&wf.Modified,
+	//			&wf.NextActivation,
+	//			&wf.Started,
+	//			&wf.ExecutorID,
+	//			&wf.ExecutorGroup,
+	//			&wf.WorkflowType,
+	//			&wf.ExternalID,
+	//			&wf.BusinessKey,
+	//			&wf.State,
+	//			&wf.StateVars,
+	//		)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		workflows = append(workflows, wf)
+	//	}
+	//	return &workflows, nil
+	//} else {
+	// minutesRepair is a string like "5" or "5 minutes"; extract leading integer minutes
+	mins := 0
+	fmt.Sscanf(minutesRepair, "%d", &mins)
+	cutoff := time.Now().UTC().Add(-time.Duration(mins) * time.Minute)
+	lastActiveCutoff := cutoff
+	rows, err := r.db.Query(query, cutoff, executorGroup, lastActiveCutoff, limit)
+	if err != nil {
+		return nil, err
 	}
-	if supportsReturning() {
-		rows, err := r.db.Query(query, minutesRepair, executorGroup, limit)
+	defer rows.Close()
+	var workflows []domain.Workflow
+	for rows.Next() {
+		var wf domain.Workflow
+		err := rows.Scan(
+			&wf.ID,
+			&wf.Status,
+			&wf.ExecutionCount,
+			&wf.RetryCount,
+			&wf.Created,
+			&wf.Modified,
+			&wf.NextActivation,
+			&wf.Started,
+			&wf.ExecutorID,
+			&wf.ExecutorGroup,
+			&wf.WorkflowType,
+			&wf.ExternalID,
+			&wf.BusinessKey,
+			&wf.State,
+			&wf.StateVars,
+		)
 		if err != nil {
 			return nil, err
 		}
-		defer rows.Close()
-		var workflows []domain.Workflow
-		for rows.Next() {
-			var wf domain.Workflow
-			err := rows.Scan(
-				&wf.ID,
-				&wf.Status,
-				&wf.ExecutionCount,
-				&wf.RetryCount,
-				&wf.Created,
-				&wf.Modified,
-				&wf.NextActivation,
-				&wf.Started,
-				&wf.ExecutorID,
-				&wf.ExecutorGroup,
-				&wf.WorkflowType,
-				&wf.ExternalID,
-				&wf.BusinessKey,
-				&wf.State,
-				&wf.StateVars,
-			)
-			if err != nil {
-				return nil, err
-			}
-			workflows = append(workflows, wf)
-		}
-		return &workflows, nil
-	} else {
-		// minutesRepair is a string like "5" or "5 minutes"; extract leading integer minutes
-		mins := 0
-		fmt.Sscanf(minutesRepair, "%d", &mins)
-		cutoff := time.Now().UTC().Add(-time.Duration(mins) * time.Minute)
-		lastActiveCutoff := cutoff
-		rows, err := r.db.Query(query, cutoff, executorGroup, lastActiveCutoff, limit)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-		var workflows []domain.Workflow
-		for rows.Next() {
-			var wf domain.Workflow
-			err := rows.Scan(
-				&wf.ID,
-				&wf.Status,
-				&wf.ExecutionCount,
-				&wf.RetryCount,
-				&wf.Created,
-				&wf.Modified,
-				&wf.NextActivation,
-				&wf.Started,
-				&wf.ExecutorID,
-				&wf.ExecutorGroup,
-				&wf.WorkflowType,
-				&wf.ExternalID,
-				&wf.BusinessKey,
-				&wf.State,
-				&wf.StateVars,
-			)
-			if err != nil {
-				return nil, err
-			}
-			workflows = append(workflows, wf)
-		}
-		return &workflows, nil
+		workflows = append(workflows, wf)
 	}
+	return &workflows, nil
+	//}
 }
 
 func (r *WorkflowRepository) LockWorkflowByModified(id int64, modified time.Time) bool {

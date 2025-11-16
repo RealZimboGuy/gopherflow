@@ -5,16 +5,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 // ExecutorRepository provides persistence for executors table.
 type ExecutorRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	clock core.Clock
 }
 
-func NewExecutorRepository(db *sql.DB) *ExecutorRepository {
-	return &ExecutorRepository{db: db}
+func NewExecutorRepository(db *sql.DB, clock core.Clock) *ExecutorRepository {
+	return &ExecutorRepository{db: db, clock: clock}
 }
 
 // Save inserts a new executor row and returns its ID.
@@ -23,7 +25,7 @@ func (r *ExecutorRepository) Save(e *domain.Executor) (int64, error) {
 	// Ensure timestamps are set if zero; started defaults to now if unset
 	var started time.Time = e.Started
 	if started.IsZero() {
-		started = time.Now()
+		started = r.clock.Now().UTC()
 	}
 	var lastActive time.Time = e.LastActive
 	if lastActive.IsZero() {
