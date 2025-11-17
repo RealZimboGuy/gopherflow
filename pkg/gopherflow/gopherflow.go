@@ -247,7 +247,7 @@ func runMigrationsFromEmbed(migrationsPath string, dbURL string) error {
 func SetupLoggerWithClock(clock core.Clock) {
 	w := os.Stderr
 	baseHandler := tint.NewHandler(w, &tint.Options{
-		Level:      slog.LevelInfo,
+		Level:      slog.LevelDebug,
 		TimeFormat: "",
 	})
 	// set default logger to the tint handler first

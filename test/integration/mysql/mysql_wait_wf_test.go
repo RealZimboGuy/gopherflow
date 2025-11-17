@@ -1,4 +1,4 @@
-package postgres
+package mysql
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 	"github.com/RealZimboGuy/gopherflow/test/integration/common"
 )
 
-func TestStartupAppAndCreateWorkflow(t *testing.T) {
+func TestStartupAppAndWaitWorkflow(t *testing.T) {
 	runTestWithSetup(t, func(t *testing.T, port int) {
 
 		clock := integration.NewFakeClock(time.Now())
@@ -31,6 +31,9 @@ func TestStartupAppAndCreateWorkflow(t *testing.T) {
 			},
 			"QuickWorkflow": func() core.Workflow {
 				return &common.QuickWorkflow{}
+			},
+			"WaitWorkflow": func() core.Workflow {
+				return &common.WaitWorkflow{}
 			},
 		}
 		app := gopherflow.SetupWithClock(clock)
@@ -49,7 +52,7 @@ func TestStartupAppAndCreateWorkflow(t *testing.T) {
 		createReq := models.CreateWorkflowRequest{
 			ExternalID:    "external-id-1",
 			ExecutorGroup: "default",
-			WorkflowType:  "QuickWorkflow",
+			WorkflowType:  "WaitWorkflow",
 			BusinessKey:   "business-key-1",
 			StateVars:     map[string]string{"ip": "127.0.0.1"},
 		}
@@ -86,6 +89,15 @@ func TestStartupAppAndCreateWorkflow(t *testing.T) {
 		slog.Info("Waiting for workflow to complete")
 		clock.Sleep(5 * time.Second)
 		slog.Info("Waiting finished")
+
+		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "IN_PROGRESS")
+
+		slog.Warn("advance clock by 15 minutes")
+		clock.Add(time.Duration(15) * time.Minute)
+
+		//the workflow should execute again now
+		slog.Info("Waiting for workflow to complete")
+		clock.Sleep(5 * time.Second)
 
 		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "FINISHED")
 

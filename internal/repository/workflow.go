@@ -168,7 +168,7 @@ func (r *WorkflowRepository) FindPendingWorkflows(size int, executorGroup string
 	query := `
 		SELECT ` + ALL_COLUMNS + `
 		FROM workflow
-		WHERE  ` + dateBeforeNow("next_activation") + `
+		WHERE  ` + dateBeforeNow("next_activation", r.clock) + `
 		  AND status in ('NEW', 'IN_PROGRESS')
 		  AND executor_id IS NULL
 		  AND executor_group = ` + placeholder(1) + `
@@ -215,7 +215,7 @@ func (r *WorkflowRepository) MarkWorkflowAsScheduledForExecution(id int64, execu
 
 	query := `
 		UPDATE workflow
-		SET status = 'SCHEDULED', modified = ` + nowFunc() + `, executor_id = ` + placeholder(1) + `
+		SET status = 'SCHEDULED', modified = ` + nowFunc(r.clock) + `, executor_id = ` + placeholder(1) + `
 		WHERE id = ` + placeholder(2) + ` AND modified = ` + placeholder(3) + ` AND status IN ('NEW', 'IN_PROGRESS') AND executor_id IS NULL
 	`
 	stringdate := formatDateInDatabase(modified)
@@ -235,7 +235,7 @@ func (r *WorkflowRepository) UpdateState(id int64, state string) error {
 
 	query := `
 		UPDATE workflow
-		SET state = ` + placeholder(1) + `, modified = ` + nowFunc() + `, retry_count = 0
+		SET state = ` + placeholder(1) + `, modified = ` + nowFunc(r.clock) + `, retry_count = 0
 		WHERE id = ` + placeholder(2) + `
 	`
 	_, err := r.db.Exec(query, state, id)
@@ -245,7 +245,7 @@ func (r *WorkflowRepository) UpdateState(id int64, state string) error {
 func (r *WorkflowRepository) UpdateWorkflowStatus(id int64, status string) error {
 	query := `
 		UPDATE workflow
-		SET status = ` + placeholder(1) + `, modified = ` + nowFunc() + `
+		SET status = ` + placeholder(1) + `, modified = ` + nowFunc(r.clock) + `
 		WHERE id = ` + placeholder(2) + `
 	`
 	_, err := r.db.Exec(query, status, id)
@@ -254,7 +254,7 @@ func (r *WorkflowRepository) UpdateWorkflowStatus(id int64, status string) error
 func (r *WorkflowRepository) UpdateWorkflowStartingTime(id int64) error {
 	query := `
 		UPDATE workflow
-		SET  started = ` + nowFunc() + `
+		SET  started = ` + nowFunc(r.clock) + `
 		WHERE id = ` + placeholder(1) + `
 	`
 	_, err := r.db.Exec(query, id)
@@ -275,7 +275,7 @@ func (r *WorkflowRepository) SaveWorkflowVariables(id int64, vars string) error 
 func (r *WorkflowRepository) SaveWorkflowVariablesAndTouch(id int64, vars string) error {
 	query := `
 		UPDATE workflow
-		SET state_vars = ` + placeholder(1) + `, modified = ` + nowFunc() + `
+		SET state_vars = ` + placeholder(1) + `, modified = ` + nowFunc(r.clock) + `
 		WHERE id = ` + placeholder(2) + `
 	`
 	_, err := r.db.Exec(query, vars, id)
@@ -285,7 +285,7 @@ func (r *WorkflowRepository) SaveWorkflowVariablesAndTouch(id int64, vars string
 func (r *WorkflowRepository) UpdateNextActivationSpecific(id int64, next time.Time) error {
 	query := `
 		UPDATE workflow
-		SET status = 'IN_PROGRESS', next_activation = ` + placeholder(1) + `, modified = ` + nowFunc() + `
+		SET status = 'IN_PROGRESS', next_activation = ` + placeholder(1) + `, modified = ` + nowFunc(r.clock) + `
 		WHERE id = ` + placeholder(2) + `
 	`
 	_, err := r.db.Exec(query, formatDateInDatabase(next), id)
@@ -296,7 +296,7 @@ func (r *WorkflowRepository) UpdateNextActivationOffset(id int64, offset string)
 	//	query := `
 	//		UPDATE workflow
 	//		SET status = 'IN_PROGRESS', next_activation = NOW() + ` + placeholder(1) + `::interval,
-	//		    modified = ` + nowFunc() + `
+	//		    modified = ` + nowFunc(r.clock) + `
 	//		WHERE id = ` + placeholder(2) + `
 	//	`
 	//	_, err := r.db.Exec(query, offset, id)
@@ -315,7 +315,7 @@ func (r *WorkflowRepository) UpdateNextActivationOffset(id int64, offset string)
 	next := time.Now().UTC().Add(dur)
 	query := `
 		UPDATE workflow
-		SET status = 'IN_PROGRESS', next_activation = ` + placeholder(1) + `, modified = ` + nowFunc() + `
+		SET status = 'IN_PROGRESS', next_activation = ` + placeholder(1) + `, modified = ` + nowFunc(r.clock) + `
 		WHERE id = ` + placeholder(2) + `
 	`
 	_, err = r.db.Exec(query, formatDateInDatabase(next), id)
@@ -365,7 +365,7 @@ func ParsePostgresInterval(interval string) (time.Duration, error) {
 func (r *WorkflowRepository) ClearExecutorId(id int64) error {
 	query := `
 		UPDATE workflow
-		SET executor_id = NULL, modified = ` + nowFunc() + `
+		SET executor_id = NULL, modified = ` + nowFunc(r.clock) + `
 		WHERE id = ` + placeholder(1) + `
 	`
 	_, err := r.db.Exec(query, id)
@@ -375,7 +375,7 @@ func (r *WorkflowRepository) ClearExecutorId(id int64) error {
 func (r *WorkflowRepository) IncrementRetryCounterAndSetNextActivation(id int64, activation time.Time) error {
 	query := `
 		UPDATE workflow
-		SET status = 'IN_PROGRESS', executor_id = NULL, retry_count = retry_count + 1, next_activation = ` + placeholder(1) + `, modified = ` + nowFunc() + `
+		SET status = 'IN_PROGRESS', executor_id = NULL, retry_count = retry_count + 1, next_activation = ` + placeholder(1) + `, modified = ` + nowFunc(r.clock) + `
 		WHERE id = ` + placeholder(2) + `
 	`
 	_, err := r.db.Exec(query, formatDateInDatabase(activation), id)
@@ -521,7 +521,7 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 func (r *WorkflowRepository) LockWorkflowByModified(id int64, modified time.Time) bool {
 	query := `
 		UPDATE workflow
-		SET status = 'LOCK', executor_id = NULL, retry_count = retry_count + 1, next_activation = ` + placeholder(1) + `, modified = ` + nowFunc() + `
+		SET status = 'LOCK', executor_id = NULL, retry_count = retry_count + 1, next_activation = ` + placeholder(1) + `, modified = ` + nowFunc(r.clock) + `
 		WHERE id = ` + placeholder(2) + ` AND modified = ` + placeholder(3) + `
 	`
 	result, err := r.db.Exec(query, formatDateInDatabase(modified), id, formatDateInDatabase(modified))
