@@ -1,4 +1,3 @@
-// File: `gopherflow/test/integration/postgres/package.go`
 package postgres
 
 import (
@@ -6,11 +5,26 @@ import (
 	"database/sql"
 	"log/slog"
 	"os"
+	"strconv"
+	"sync/atomic"
+	"testing"
 
-	_ "github.com/lib/pq"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+var portBase int32 = 9098 // starting port number (can be anything safe)
+
+func nextPort() int {
+	return int(atomic.AddInt32(&portBase, 1))
+}
+func runTestWithSetup(t *testing.T, testFunc func(t *testing.T, port int)) {
+	port := nextPort()
+	os.Setenv("HTTP_ADDR", ":"+strconv.Itoa(port))
+	container, _ := SetupPostgresTestInstance(t.Context())
+	defer container.Terminate(t.Context())
+	testFunc(t, port)
+}
 
 func SetupPostgresTestInstance(ctx context.Context) (testcontainers.Container, string) {
 

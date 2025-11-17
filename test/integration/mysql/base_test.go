@@ -1,16 +1,29 @@
-// File: `gopherflow/test/integration/mysql/package.go`
 package mysql
 
 import (
 	"context"
 	"log/slog"
 	"os"
+	"strconv"
+	"sync/atomic"
+	"testing"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+var portBase int32 = 9048 // starting port number (can be anything safe)
+
+func nextPort() int {
+	return int(atomic.AddInt32(&portBase, 1))
+}
+func runTestWithSetup(t *testing.T, testFunc func(t *testing.T, port int)) {
+	port := nextPort()
+	os.Setenv("HTTP_ADDR", ":"+strconv.Itoa(port))
+	container, _ := SetupMySQLTestInstance(t.Context())
+	defer container.Terminate(t.Context())
+	testFunc(t, port)
+}
 func SetupMySQLTestInstance(ctx context.Context) (testcontainers.Container, string) {
 	req := testcontainers.ContainerRequest{
 		Image:        "mysql:8.1", // MySQL image

@@ -14,8 +14,7 @@ func main() {
 	//you may do your own logger setup here or use this default one with slog
 	ctx := context.Background()
 
-	clock := core.NewRealClock()
-	gopherflow.SetupLogger(clock)
+	gopherflow.SetupLogger()
 
 	gopherflow.WorkflowRegistry = map[string]func() core.Workflow{
 		"DemoWorkflow": func() core.Workflow {
@@ -30,7 +29,7 @@ func main() {
 		},
 	}
 
-	app := gopherflow.Setup(clock)
+	app := gopherflow.Setup()
 
 	if err := app.Run(ctx); err != nil {
 		slog.Error("Engine exited with error", "error", err)

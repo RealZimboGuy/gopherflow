@@ -19,8 +19,6 @@ import (
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"github.com/RealZimboGuy/gopherflow/internal/web"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
-
-	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/lmittmann/tint"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -28,6 +26,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -55,8 +54,12 @@ type logHandler struct {
 	Clock core.Clock
 }
 
-// Setup sets up the database, repositories, workflow manager, and HTTP mux.
-func Setup(clock core.Clock) *App {
+func Setup() *App {
+	return SetupWithClock(core.NewRealClock())
+}
+
+// SetupWithClock sets up the database, repositories, workflow manager, and HTTP mux.
+func SetupWithClock(clock core.Clock) *App {
 	databaseType := config.GetSystemSettingString(config.DATABASE_TYPE)
 	if databaseType == "" || (databaseType != config.DATABASE_TYPE_POSTGRES &&
 		databaseType != config.DATABASE_TYPE_MYSQL &&
@@ -241,7 +244,7 @@ func runMigrationsFromEmbed(migrationsPath string, dbURL string) error {
 	return nil
 }
 
-func SetupLogger(clock core.Clock) {
+func SetupLoggerWithClock(clock core.Clock) {
 	w := os.Stderr
 	baseHandler := tint.NewHandler(w, &tint.Options{
 		Level:      slog.LevelInfo,
@@ -252,6 +255,9 @@ func SetupLogger(clock core.Clock) {
 	// wrap the base handler with our custom logHandler for extra fields
 	logger := slog.New(&logHandler{Handler: baseHandler, Clock: clock})
 	slog.SetDefault(logger)
+}
+func SetupLogger() {
+	SetupLoggerWithClock(core.NewRealClock())
 }
 
 func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
