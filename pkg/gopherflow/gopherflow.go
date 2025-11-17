@@ -251,7 +251,7 @@ func SetupLoggerWithClock(clock core.Clock) {
 		TimeFormat: "",
 	})
 	// set default logger to the tint handler first
-	slog.SetDefault(slog.New(baseHandler))
+	//slog.SetDefaultault(slog.New(baseHandler))
 	// wrap the base handler with our custom logHandler for extra fields
 	logger := slog.New(&logHandler{Handler: baseHandler, Clock: clock})
 	slog.SetDefault(logger)

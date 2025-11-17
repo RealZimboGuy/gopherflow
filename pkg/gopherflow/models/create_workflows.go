@@ -16,6 +16,11 @@ type CreateWorkflowRequest struct {
 	NextActivationOffset string     `json:"nextActivationOffset,omitempty"`
 }
 
+// createWorkflowResponse is returned on successful creation.
+type CreateWorkflowResponse struct {
+	ID int64 `json:"id"`
+}
+
 // CreateAndWaitRequest is the payload for creating a workflow then waiting the number of seconds for the workflow to reach the given states. otherwise it times out
 type CreateAndWaitRequest struct {
 	CreateWorkflowRequest CreateWorkflowRequest `json:"createWorkflowRequest"`

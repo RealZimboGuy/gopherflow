@@ -34,9 +34,34 @@ func NewWorkflowsController(workflowRepo *repository.WorkflowRepository, workflo
 	}}
 }
 
-// createWorkflowResponse is returned on successful creation.
-type createWorkflowResponse struct {
-	ID int64 `json:"id"`
+func (c *WorkflowsController) handleGetWorkflowById(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	id64 := int64(id)
+	result, err := c.WorkflowManager.WorkflowRepo.FindByID(id64)
+	if err != nil {
+		http.Error(w, "workflow not found", http.StatusNotFound)
+		return
+	}
+	apiResult := mapWorkflowToApiWorkflow(result, id64)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(apiResult)
+
 }
 
 func (c *WorkflowsController) handleCreateWorkflow(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +96,7 @@ func (c *WorkflowsController) handleCreateWorkflow(w http.ResponseWriter, r *htt
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(createWorkflowResponse{ID: id})
+	json.NewEncoder(w).Encode(models.CreateWorkflowResponse{ID: id})
 }
 
 func validateCreateWorkflow(req models.CreateWorkflowRequest) error {

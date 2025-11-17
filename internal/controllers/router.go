@@ -5,6 +5,7 @@ import "net/http"
 // RegisterRoutes wires the HTTP routes for this controller.
 func (c *WorkflowsController) RegisterRoutes() {
 	http.HandleFunc("/api/workflows", c.RequireAuth(c.handleCreateWorkflow))
+	http.HandleFunc("/api/workflows/{id}", c.RequireAuth(c.handleGetWorkflowById))
 	http.HandleFunc("/api/createAndWait", c.RequireAuth(c.handleCreateAndWaitWorkflow))
 	http.HandleFunc("/api/workflows/search", c.RequireAuth(c.handleSearchWorkflows))
 	http.HandleFunc("POST /api/workflows/{id}/state", c.RequireAuth(c.handleUpdateWorkflowState))

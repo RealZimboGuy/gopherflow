@@ -17,7 +17,14 @@ type FakeClock struct {
 }
 
 func NewFakeClock(start time.Time) *FakeClock {
-	return &FakeClock{now: start}
+	c := &FakeClock{
+		now: start,
+	}
+
+	// Auto-start ticking every 100ms
+	c.Tick(10 * time.Millisecond)
+
+	return c
 }
 
 // Now just returns the current fake time
@@ -67,4 +74,27 @@ func (c *FakeClock) Add(d time.Duration) {
 
 	c.timers = remaining
 	c.mu.Unlock()
+}
+
+// Tick automatically advances the fake clock every interval by calling Add(d).
+func (c *FakeClock) Tick(d time.Duration) func() {
+	stop := make(chan struct{})
+
+	go func() {
+		ticker := time.NewTicker(d)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				// Advance fake time by d
+				c.Add(d)
+			case <-stop:
+				return
+			}
+		}
+	}()
+
+	// return a function to stop ticking
+	return func() { close(stop) }
 }
