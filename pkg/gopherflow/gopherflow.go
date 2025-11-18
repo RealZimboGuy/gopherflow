@@ -245,10 +245,10 @@ func runMigrationsFromEmbed(migrationsPath string, dbURL string) error {
 	return nil
 }
 
-func SetupLoggerWithClock(clock core.Clock) {
+func SetupLoggerWithClock(logLevel slog.Leveler, clock core.Clock) {
 	w := os.Stderr
 	baseHandler := tint.NewHandler(w, &tint.Options{
-		Level:      slog.LevelDebug,
+		Level:      logLevel,
 		TimeFormat: "",
 	})
 	// set default logger to the tint handler first
@@ -257,8 +257,8 @@ func SetupLoggerWithClock(clock core.Clock) {
 	logger := slog.New(&logHandler{Handler: baseHandler, Clock: clock})
 	slog.SetDefault(logger)
 }
-func SetupLogger() {
-	SetupLoggerWithClock(core.NewRealClock())
+func SetupLogger(logLevel slog.Leveler) {
+	SetupLoggerWithClock(logLevel, core.NewRealClock())
 }
 
 func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {

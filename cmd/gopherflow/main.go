@@ -14,7 +14,7 @@ func main() {
 	//you may do your own logger setup here or use this default one with slog
 	ctx := context.Background()
 
-	gopherflow.SetupLogger()
+	gopherflow.SetupLogger(slog.LevelInfo)
 
 	workflowRegistry := map[string]func() core.Workflow{
 		"DemoWorkflow": func() core.Workflow {

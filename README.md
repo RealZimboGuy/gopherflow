@@ -173,18 +173,21 @@ defer resp.Body.Close()
 
 ### Main function
 ```go
-    import (
+   import (
+    "context"
     "log/slog"
-    "reflect"
     
-        "github.com/RealZimboGuy/gopherflow/pkg/gopherflow"
-        "github.com/RealZimboGuy/gopherflow_example/internal/workflows"
+    "github.com/RealZimboGuy/gopherflow/internal/workflows"
+    "github.com/RealZimboGuy/gopherflow/pkg/gopherflow"
+    "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
     )
     
-func main() {
-    ctx := context.Background() 
+    func main() {
+    
     //you may do your own logger setup here or use this default one with slog
-    gopherflow.SetupLogger()
+    ctx := context.Background()
+    
+    gopherflow.SetupLogger(slog.LevelInfo)
     
     workflowRegistry := map[string]func() core.Workflow{
                 "DemoWorkflow": func() core.Workflow {
