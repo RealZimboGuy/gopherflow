@@ -19,18 +19,16 @@ func placeholder(i int) string {
 
 func nowFunc(clock core.Clock) string {
 	// Format the clock's current time in UTC with microsecond precision
-	timestamp := clock.Now().UTC().Format("2006-01-02 15:04:05.000000")
 
 	db := config.GetSystemSettingString(config.DATABASE_TYPE)
 	switch db {
 	case config.DATABASE_TYPE_POSTGRES, config.DATABASE_TYPE_MYSQL:
 		// Quote the timestamp literal for SQL
-		return fmt.Sprintf("'%s'", timestamp)
+		return fmt.Sprintf("'%s'", clock.Now().UTC().Format("2006-01-02 15:04:05.000000"))
 	case config.DATABASE_TYPE_SQLLITE:
-		// SQLite also needs quotes
-		return fmt.Sprintf("'%s'", timestamp)
+		return fmt.Sprintf("'%s'", clock.Now().UTC().Format("2006-01-02 15:04:05.000"))
 	default:
-		return fmt.Sprintf("'%s'", timestamp)
+		return fmt.Sprintf("'%s'", clock.Now().UTC().Format("2006-01-02 15:04:05.000000"))
 	}
 }
 

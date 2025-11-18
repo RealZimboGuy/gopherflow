@@ -186,7 +186,7 @@ func main() {
     //you may do your own logger setup here or use this default one with slog
     gopherflow.SetupLogger()
     
-    gopherflow.WorkflowRegistry = map[string]func() core.Workflow{
+    workflowRegistry := map[string]func() core.Workflow{
                 "DemoWorkflow": func() core.Workflow {
                      return &workflows.DemoWorkflow{}
                 },
@@ -199,7 +199,7 @@ func main() {
                 },
         }
     //uses the defaul ServeMux
-    app := gopherflow.Setup()
+    app := gopherflow.Setup(workflowRegistry)
     
     if err := app.Run(ctx); err != nil {
         slog.Error("Engine exited with error", "error", err)

@@ -13,6 +13,7 @@ import (
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	"github.com/RealZimboGuy/gopherflow/test/integration"
+	"github.com/RealZimboGuy/gopherflow/test/integration/common"
 )
 
 func TestStartupAppAndGetExecutor(t *testing.T) {
@@ -20,7 +21,7 @@ func TestStartupAppAndGetExecutor(t *testing.T) {
 
 		clock := integration.NewFakeClock(time.Now())
 		gopherflow.SetupLoggerWithClock(clock)
-		gopherflow.WorkflowRegistry = map[string]func() core.Workflow{
+		workflowRegistry := map[string]func() core.Workflow{
 			"DemoWorkflow": func() core.Workflow {
 				return &workflows.DemoWorkflow{
 					Clock: clock,
@@ -29,8 +30,11 @@ func TestStartupAppAndGetExecutor(t *testing.T) {
 			"GetIpWorkflow": func() core.Workflow {
 				return &workflows.GetIpWorkflow{}
 			},
+			"WaitWorkflow": func() core.Workflow {
+				return &common.WaitWorkflow{}
+			},
 		}
-		app := gopherflow.SetupWithClock(clock)
+		app := gopherflow.SetupWithClock(workflowRegistry, clock)
 
 		// Start the app in a goroutine so it doesn't block
 		go func() {

@@ -23,7 +23,7 @@ func TestStartupAppAndWaitWorkflow(t *testing.T) {
 
 		clock := integration.NewFakeClock(time.Now())
 		gopherflow.SetupLoggerWithClock(clock)
-		gopherflow.WorkflowRegistry = map[string]func() core.Workflow{
+		workflowRegistry := map[string]func() core.Workflow{
 			"DemoWorkflow": func() core.Workflow {
 				return &workflows.DemoWorkflow{
 					Clock: clock,
@@ -36,7 +36,7 @@ func TestStartupAppAndWaitWorkflow(t *testing.T) {
 				return &common.WaitWorkflow{}
 			},
 		}
-		app := gopherflow.SetupWithClock(clock)
+		app := gopherflow.SetupWithClock(workflowRegistry, clock)
 
 		// Start the app in a goroutine so it doesn't block
 		go func() {

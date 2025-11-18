@@ -1,4 +1,4 @@
-package postgres
+package sqllite
 
 import (
 	"bytes"
@@ -31,6 +31,9 @@ func TestStartupAppAndCreateWorkflow(t *testing.T) {
 			},
 			"QuickWorkflow": func() core.Workflow {
 				return &common.QuickWorkflow{}
+			},
+			"WaitWorkflow": func() core.Workflow {
+				return &common.WaitWorkflow{}
 			},
 		}
 		app := gopherflow.SetupWithClock(workflowRegistry, clock)

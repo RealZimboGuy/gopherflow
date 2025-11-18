@@ -360,7 +360,7 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 		exclusiveLock := wm.WorkflowRepo.MarkWorkflowAsScheduledForExecution(wf.ID, wm.executorID, wf.Modified)
 
 		if exclusiveLock == false {
-			slog.Info("Workflow already running unable to gain lock", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
+			slog.Info("Unable to gain lock on workflow, possibly piced up by other executor", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 			_, _ = wm.WorkflowActionRepo.Save(&domain.WorkflowAction{WorkflowID: wf.ID, ExecutorID: wm.executorID, ExecutionCount: 1, Type: "LOCK_FAILED", Name: "LOCK_FAILED", Text: "Failed to Acquier a lock on the workflow", DateTime: time.Now()})
 			continue
 		}
@@ -383,6 +383,8 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 func createWorkflow(wm *WorkflowManager, name string) (core.Workflow, error) {
 	factory, ok := (*wm.WorkflowRegistry)[name]
 	if !ok {
+		slog.Error("workflow not found", "name", name)
+		slog.Error("workflow registry", "registry", *wm.WorkflowRegistry)
 		return nil, fmt.Errorf("workflow not found: %s", name)
 	}
 	return factory(), nil

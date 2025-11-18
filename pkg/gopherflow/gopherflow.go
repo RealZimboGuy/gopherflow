@@ -35,13 +35,14 @@ type ctxKey string
 
 const ExecutorId ctxKey = "executorId"
 
-var WorkflowRegistry map[string]func() core.Workflow
+//var WorkflowRegistry map[string]func() core.Workflow
 
 // App wires together the workflow engine, repositories, and HTTP server.
 type App struct {
-	DB      *sql.DB
-	Manager *engine.WorkflowManager
-	Repos   struct {
+	DB               *sql.DB
+	Manager          *engine.WorkflowManager
+	WorkflowRegistry map[string]func() core.Workflow
+	Repos            struct {
 		Workflows   *repository.WorkflowRepository
 		Actions     *repository.WorkflowActionRepository
 		Executors   *repository.ExecutorRepository
@@ -54,12 +55,12 @@ type logHandler struct {
 	Clock core.Clock
 }
 
-func Setup() *App {
-	return SetupWithClock(core.NewRealClock())
+func Setup(registry map[string]func() core.Workflow) *App {
+	return SetupWithClock(registry, core.NewRealClock())
 }
 
 // SetupWithClock sets up the database, repositories, workflow manager, and HTTP mux.
-func SetupWithClock(clock core.Clock) *App {
+func SetupWithClock(registry map[string]func() core.Workflow, clock core.Clock) *App {
 	databaseType := config.GetSystemSettingString(config.DATABASE_TYPE)
 	if databaseType == "" || (databaseType != config.DATABASE_TYPE_POSTGRES &&
 		databaseType != config.DATABASE_TYPE_MYSQL &&
@@ -92,7 +93,7 @@ func SetupWithClock(clock core.Clock) *App {
 		app.Repos.Actions,
 		app.Repos.Executors,
 		app.Repos.Definitions,
-		&WorkflowRegistry,
+		&registry,
 		clock,
 	)
 
@@ -142,7 +143,7 @@ func (a *App) Run(ctx context.Context) error {
 func (a *App) Shutdown() {
 
 	//remove any global setups to clean up resources
-	WorkflowRegistry = make(map[string]func() core.Workflow)
+	//WorkflowRegistry = make(map[string]func() core.Workflow)
 	a.DB.Close()
 	slog.Info("DB connection closed")
 	//remove any global registered routes

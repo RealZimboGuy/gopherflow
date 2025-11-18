@@ -2,6 +2,7 @@ package sqllite
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -15,13 +16,15 @@ func nextPort() int {
 }
 func runTestWithSetup(t *testing.T, testFunc func(t *testing.T, port int)) {
 	port := nextPort()
+	filename := fmt.Sprintf("gopherflow-test-%d.db", port)
+	defer os.Remove(filename)
 	os.Setenv("HTTP_ADDR", ":"+strconv.Itoa(port))
-	SetupSqlLiteTestInstance(t.Context())
+	SetupSqlLiteTestInstance(t.Context(), filename)
 	testFunc(t, port)
 }
 
-func SetupSqlLiteTestInstance(ctx context.Context) {
+func SetupSqlLiteTestInstance(ctx context.Context, filename string) {
 
 	os.Setenv("GFLOW_DATABASE_TYPE", "SQLLITE")
-	os.Setenv("GFLOW_DATABASE_SQLLITE_FILE_NAME", "memory")
+	os.Setenv("GFLOW_DATABASE_SQLLITE_FILE_NAME", filename)
 }
