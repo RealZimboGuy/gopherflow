@@ -114,10 +114,13 @@ func (wm *WorkflowManager) StartEngine(ctx context.Context, pollInterval time.Du
 
 	for {
 		select {
+		case <-ctx.Done():
+			slog.InfoContext(ctx, "Workflow engine stopping due to context cancel")
+			return
 		case <-ticker.C:
-			wm.pollAndRunWorkflows()
+			wm.pollAndRunWorkflows(ctx)
 		case <-wm.wakeup:
-			wm.pollAndRunWorkflows()
+			wm.pollAndRunWorkflows(ctx)
 		}
 
 	}
@@ -132,6 +135,9 @@ func startWorkflowRepairService(ctx context.Context, wm *WorkflowManager) {
 
 	for {
 		select {
+		case <-ctx.Done():
+			slog.InfoContext(ctx, "Workflow repair service stopping due to context cancel")
+			return
 		case <-ticker.C:
 			// Find stuck workflows and attempt to wake them up
 			stuckWorkflows, err := wm.WorkflowRepo.FindStuckWorkflows(
@@ -179,7 +185,7 @@ func registerWorkflowDefinitions(ctx context.Context, wm *WorkflowManager) {
 		def, err := wm.DefinitionRepo.FindByName(name)
 		if err != nil {
 			// If not found, we'll create it; for other errors, log and continue
-			slog.Warn("Workflow definition lookup error, will attempt create", "name", name, "error", err)
+			slog.WarnContext(ctx, "Workflow definition lookup error, will attempt create", "name", name, "error", err)
 			def = nil
 		}
 
@@ -227,7 +233,7 @@ func registerWorkflowDefinitions(ctx context.Context, wm *WorkflowManager) {
 				Updated:     time.Now(),
 				FlowChart:   flow,
 			}
-			slog.Info("Saving workflow definition", "name", name)
+			slog.InfoContext(ctx, "Saving workflow definition", "name", name)
 			if err := wm.DefinitionRepo.Save(def); err != nil {
 				slog.Error("Failed to save workflow definition", "name", name, "error", err)
 			}
@@ -235,7 +241,7 @@ func registerWorkflowDefinitions(ctx context.Context, wm *WorkflowManager) {
 		}
 
 		// Update existing definition
-		slog.Info("Updating workflow definition", "name", name)
+		slog.InfoContext(ctx, "Updating workflow definition", "name", name)
 		def.Description = desc
 		def.Updated = time.Now()
 		def.FlowChart = flow
@@ -335,7 +341,7 @@ func registerExecutorInstance(ctx context.Context, wm *WorkflowManager) {
 }
 
 // pollAndRunWorkflows queries the repository for new workflows and runs them
-func (wm *WorkflowManager) pollAndRunWorkflows() {
+func (wm *WorkflowManager) pollAndRunWorkflows(ctx context.Context) {
 
 	slog.Debug("Polling for new workflows")
 
@@ -356,11 +362,11 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 	for _, wf := range *workflows {
 
 		// first we mark the workflow as running
-		slog.Info("Marking workflow as scheduled for execution", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
+		slog.InfoContext(ctx, "Marking workflow as scheduled for execution", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 		exclusiveLock := wm.WorkflowRepo.MarkWorkflowAsScheduledForExecution(wf.ID, wm.executorID, wf.Modified)
 
 		if exclusiveLock == false {
-			slog.Info("Unable to gain lock on workflow, possibly piced up by other executor", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
+			slog.InfoContext(ctx, "Unable to gain lock on workflow, possibly piced up by other executor", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 			_, _ = wm.WorkflowActionRepo.Save(&domain.WorkflowAction{WorkflowID: wf.ID, ExecutorID: wm.executorID, ExecutionCount: 1, Type: "LOCK_FAILED", Name: "LOCK_FAILED", Text: "Failed to Acquier a lock on the workflow", DateTime: time.Now()})
 			continue
 		}
@@ -369,12 +375,12 @@ func (wm *WorkflowManager) pollAndRunWorkflows() {
 		// create an instance of the workflow based on the type
 		instance, _ := createWorkflow(wm, wf.WorkflowType)
 
-		slog.Info("Add workflow to execution channel", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
+		slog.InfoContext(ctx, "Add workflow to execution channel", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 		ptr := instance.(core.Workflow)
 		ptr.Setup(&wf)
 		workflowQueue <- ptr
 
-		slog.Info("Running workflow", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
+		slog.InfoContext(ctx, "Running workflow", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 		// RunWorkflow(wf) // call your workflow runner here
 	}
 

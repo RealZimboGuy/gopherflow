@@ -144,7 +144,7 @@ func (a *App) Shutdown() {
 
 	//remove any global setups to clean up resources
 	//WorkflowRegistry = make(map[string]func() core.Workflow)
-	a.DB.Close()
+	//a.DB.Close()
 	slog.Info("DB connection closed")
 	//remove any global registered routes
 	http.DefaultServeMux = new(http.ServeMux)

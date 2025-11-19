@@ -18,7 +18,9 @@ func main() {
 
 	workflowRegistry := map[string]func() core.Workflow{
 		"DemoWorkflow": func() core.Workflow {
-			return &workflows.DemoWorkflow{}
+			return &workflows.DemoWorkflow{
+				Clock: core.NewRealClock(),
+			}
 		},
 		"GetIpWorkflow": func() core.Workflow {
 			// You can inject dependencies here

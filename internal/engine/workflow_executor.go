@@ -22,7 +22,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "EXECUTING", Name: "EXECUTING", Text: "EXECUTING", DateTime: time.Now()})
 
 	if err != nil {
-		slog.Error("Error updating workflow status", "error", err, "worker_id", workerID)
+		slog.ErrorContext(ctx, "Error updating workflow status", "error", err, "worker_id", workerID)
 		return
 	}
 
@@ -36,7 +36,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 		err := r.UpdateWorkflowStartingTime(w.GetWorkflowData().ID)
 		_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "STARTING", Name: "EXECUTING", Text: "Starting Workflow", DateTime: time.Now()})
 		if err != nil {
-			slog.Error("Error updating workflow starting time", "error", err, "worker_id", workerID)
+			slog.ErrorContext(ctx, "Error updating workflow starting time", "error", err, "worker_id", workerID)
 			return
 		}
 	}
@@ -134,7 +134,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 			//if nextExecution.After(time.Now()) { // no need, if its in the past it will just run on the next pick up
 			slog.InfoContext(ctx, "Setting next activation (specific)", "workflow_id", w.GetWorkflowData().ID, "next_activation", nextExecution, "worker_id", workerID)
 			if err := r.UpdateNextActivationSpecific(w.GetWorkflowData().ID, nextExecution); err != nil {
-				slog.Error("Error updating next activation", "error", err, "worker_id", workerID)
+				slog.ErrorContext(ctx, "Error updating next activation", "error", err, "worker_id", workerID)
 				return
 			}
 			_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "SCHEDULE_ACTIVATION", Name: currentState, Text: nextExecution.String(), DateTime: time.Now()})
@@ -145,7 +145,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 		if nextExecutionOffset != "" {
 			slog.InfoContext(ctx, "Setting next activation (offset)", "workflow_id", w.GetWorkflowData().ID, "offset", nextExecutionOffset, "worker_id", workerID)
 			if err := r.UpdateNextActivationOffset(w.GetWorkflowData().ID, nextExecutionOffset); err != nil {
-				slog.Error("Error updating next activation", "error", err, "worker_id", workerID)
+				slog.ErrorContext(ctx, "Error updating next activation", "error", err, "worker_id", workerID)
 				return
 			}
 			_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "SCHEDULE_ACTIVATION", Name: currentState, Text: nextExecutionOffset, DateTime: time.Now()})
@@ -158,7 +158,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 	//clear out the executor id for another to possibly pick up the workflow
 	err = r.ClearExecutorId(w.GetWorkflowData().ID)
 	if err != nil {
-		slog.Error("Error clearing executor id", "error", err, "worker_id", workerID)
+		slog.ErrorContext(ctx, "Error clearing executor id", "error", err, "worker_id", workerID)
 		return
 	}
 	slog.InfoContext(ctx, "Workflow finished", "worker_id", workerID)
@@ -170,14 +170,14 @@ func processWorflowCompleted(ctx context.Context, w core.Workflow, r repository.
 	err := r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "FINISHED")
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "END", Name: currentState, Text: "workflow complete", DateTime: time.Now()})
 	if err != nil {
-		slog.Error("Error updating workflow status", "error", err, "worker_id", workerID)
+		slog.ErrorContext(ctx, "Error updating workflow status", "error", err, "worker_id", workerID)
 		return true
 	}
 	return false
 }
 
 func processStateExecutionError(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string, callErr error) {
-	slog.Error("Error executing state method", "state", currentState, "error", callErr, "worker_id", workerID)
+	slog.ErrorContext(ctx, "Error executing state method", "state", currentState, "error", callErr, "worker_id", workerID)
 	_, _ = wa.Save(&domain.WorkflowAction{
 		WorkflowID:     w.GetWorkflowData().ID,
 		ExecutorID:     executorID,
@@ -189,10 +189,10 @@ func processStateExecutionError(ctx context.Context, w core.Workflow, r reposito
 	})
 	//increment workflow retry counter
 	if w.GetWorkflowData().RetryCount > w.GetRetryConfig().MaxRetryCount {
-		slog.Error("Max retry count reached", "worker_id", workerID)
+		slog.ErrorContext(ctx, "Max retry count reached", "worker_id", workerID)
 		_ = r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "FAILED")
 		_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount,
-			Type: "FAILED", Name: currentState, Text: fmt.Sprintf("Max retry count reached :%s", w.GetWorkflowData().RetryCount), DateTime: time.Now()})
+			Type: "FAILED", Name: currentState, Text: fmt.Sprintf("Max retry count reached for workflow id:%d count :%d", w.GetWorkflowData().ID, w.GetWorkflowData().RetryCount), DateTime: time.Now()})
 		return
 	}
 
@@ -204,7 +204,7 @@ func processStateExecutionError(ctx context.Context, w core.Workflow, r reposito
 	nextActivation := time.Now().Add(config.SlidingInterval(w.GetWorkflowData().RetryCount))
 	err := r.IncrementRetryCounterAndSetNextActivation(w.GetWorkflowData().ID, nextActivation)
 	if err != nil {
-		slog.Error("Error incrementing retry count", "error", err, "worker_id", workerID)
+		slog.ErrorContext(ctx, "Error incrementing retry count", "error", err, "worker_id", workerID)
 		return
 	}
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount,
@@ -219,7 +219,7 @@ func compareAndSaveWorkflowStateVars(ctx context.Context, w core.Workflow, r rep
 		slog.InfoContext(ctx, "Updating workflow variables", "workflow_id", w.GetWorkflowData().ID, "state_vars", string(jsonString), "worker_id", workerID)
 		err2 := r.SaveWorkflowVariables(w.GetWorkflowData().ID, string(jsonString))
 		if err2 != nil {
-			slog.Error("Error saving workflow variables", "error", err2, "worker_id", workerID)
+			slog.ErrorContext(ctx, "Error saving workflow variables", "error", err2, "worker_id", workerID)
 			return true
 		}
 	} else {

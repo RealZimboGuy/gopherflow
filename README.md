@@ -143,7 +143,9 @@ return states
 
 // Each method returns the next state
 func (m *GetIpWorkflow) Start(ctx context.Context) (*models.NextState, error) {
-slog.Info("Starting workflow")
+
+//use the Context slog because there are workerids and other fields in the context that get written by the logger
+slog.InfoContext(ctx,"Starting workflow")
 
 	return &models.NextState{
 		Name:      StateGetIpData,

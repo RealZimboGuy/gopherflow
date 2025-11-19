@@ -104,7 +104,8 @@ func (m *DemoWorkflow) Review(ctx context.Context) (*models.NextState, error) {
 
 	//block for 20 seconds
 	fmt.Println("Sleeping for 200 seconds")
-	m.Clock.Sleep(200 * time.Second)
+	//m.Clock.Sleep(200 * time.Second)
+	//return nil,fmt.
 
 	//wait 30 seconds
 	return &models.NextState{
