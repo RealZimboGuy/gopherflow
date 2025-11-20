@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -1030,4 +1031,227 @@ func (wc *WebController) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Always redirect to login
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}
+
+// User Management Handlers
+
+// usersHandler displays a list of all users
+func (wc *WebController) usersHandler(w http.ResponseWriter, r *http.Request) {
+	users, err := wc.userRepo.FindAll()
+	if err != nil {
+		slog.Error("Failed to get users", "error", err)
+		http.Error(w, "Failed to load users", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to view model with masked passwords
+	type userVM struct {
+		ID         int64
+		Username   string 
+		ApiKey     string
+		Created    string
+		Enabled    string
+		SessionID  string
+	}
+
+	userList := make([]userVM, 0)
+	if users != nil {
+		for _, u := range *users {
+			var apiKey, created, enabled, sessionID string
+			
+			if u.ApiKey.Valid {
+				apiKey = u.ApiKey.String
+			}
+			
+			if u.Created.Valid {
+				created = u.Created.Time.Local().Format("2006-01-02 15:04:05")
+			}
+			
+			if u.Enabled.Valid {
+				if u.Enabled.Bool {
+					enabled = "Yes"
+				} else {
+					enabled = "No"
+				}
+			}
+			
+			if u.SessionID.Valid {
+				sessionID = "Active"
+			} else {
+				sessionID = "None"
+			}
+			
+			userList = append(userList, userVM{
+				ID:         u.ID,
+				Username:   u.Username,
+				ApiKey:     apiKey,
+				Created:    created,
+				Enabled:    enabled,
+				SessionID:  sessionID,
+			})
+		}
+	}
+
+	data := struct {
+		Title       string
+		CurrentPath string
+		Users       []userVM
+	}{
+		Title:       "User Management",
+		CurrentPath: r.URL.Path,
+		Users:       userList,
+	}
+
+	tmpl, err := template.New("").Funcs(template.FuncMap{"hasPrefix": hasPrefix}).ParseFS(
+		templatesFS,
+		"templates/fragments/header.html",
+		"templates/fragments/nav.html",
+		"templates/users/users.html",
+	)
+	if err != nil {
+		slog.Error("Failed to parse users template", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.ExecuteTemplate(w, "users", data); err != nil {
+		slog.Error("Failed to execute users template", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// createUserHandler displays the form to create a new user
+func (wc *WebController) createUserHandler(w http.ResponseWriter, r *http.Request) {
+	data := struct {
+		Title       string
+		CurrentPath string
+	}{
+		Title:       "Create User",
+		CurrentPath: r.URL.Path,
+	}
+
+	tmpl, err := template.New("").Funcs(template.FuncMap{"hasPrefix": hasPrefix}).ParseFS(
+		templatesFS,
+		"templates/fragments/header.html",
+		"templates/fragments/nav.html",
+		"templates/users/create_user.html",
+	)
+	if err != nil {
+		slog.Error("Failed to parse create user template", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.ExecuteTemplate(w, "create_user", data); err != nil {
+		slog.Error("Failed to execute create user template", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// createUserSubmitHandler processes the form submission to create a new user
+func (wc *WebController) createUserSubmitHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form submission", http.StatusBadRequest)
+		return
+	}
+	
+	username := strings.TrimSpace(r.FormValue("username"))
+	password := r.FormValue("password")
+	apiKey := r.FormValue("apiKey")
+	enabledStr := r.FormValue("enabled")
+	
+	if username == "" || password == "" {
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+	
+	// Check if username already exists
+	existingUser, err := wc.userRepo.FindByUsername(username)
+	if err != nil {
+		slog.Error("Error checking for existing user", "error", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	if existingUser != nil {
+		http.Error(w, "Username already exists", http.StatusBadRequest)
+		return
+	}
+	
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		slog.Error("Failed to hash password", "error", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	
+	// Create the user
+	user := &domain.User{
+		Username: username,
+		Password: string(hashedPassword),
+		Created:  sql.NullTime{Time: time.Now().UTC(), Valid: true},
+		Enabled:  sql.NullBool{Bool: enabledStr == "on", Valid: true},
+	}
+	
+	if apiKey != "" {
+		user.ApiKey = sql.NullString{String: apiKey, Valid: true}
+	}
+	
+	_, err = wc.userRepo.Save(user)
+	if err != nil {
+		slog.Error("Failed to create user", "error", err)
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		return
+	}
+	
+	// Redirect to users list
+	http.Redirect(w, r, "/users", http.StatusSeeOther)
+}
+
+// deleteUserHandler processes a request to delete a user
+func (wc *WebController) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+	
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+	
+	// Don't allow deleting the currently logged-in user
+	c, err := r.Cookie("sessionId")
+	if err == nil && c.Value != "" {
+		currentUser, _ := wc.userRepo.FindBySessionID(c.Value, time.Now().UTC())
+		if currentUser != nil && currentUser.ID == id {
+			http.Error(w, "Cannot delete your own account", http.StatusBadRequest)
+			return
+		}
+	}
+	
+	// Check if user exists
+	user, err := wc.userRepo.FindById(id)
+	if err != nil {
+		slog.Error("Error finding user", "id", id, "error", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	if user == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	
+	// Delete the user
+	err = wc.userRepo.DeleteById(id)
+	if err != nil {
+		slog.Error("Failed to delete user", "id", id, "error", err)
+		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
+		return
+	}
+	
+	// Redirect to users list
+	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }

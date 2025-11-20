@@ -223,3 +223,43 @@ func (r *UserRepository) FindAll() (*[]domain.User, error) {
 
 	return &users, nil
 }
+
+// FindById fetches a user by ID. Returns (nil, nil) if not found.
+func (r *UserRepository) FindById(id int64) (*domain.User, error) {
+	query := `
+        SELECT id, username, password, retry_count, session_id, api_key,sessionExpiry, created, enabled
+        FROM users
+        WHERE id = ` + placeholder(1) + `
+        LIMIT 1
+    `
+
+	var u domain.User
+	err := r.db.QueryRow(query, id).Scan(
+		&u.ID,
+		&u.Username,
+		&u.Password,
+		&u.RetryCount,
+		&u.SessionID,
+		&u.ApiKey,
+		&u.SessionExpiry,
+		&u.Created,
+		&u.Enabled,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+// DeleteById deletes a user by ID.
+func (r *UserRepository) DeleteById(id int64) error {
+	query := `
+        DELETE FROM users 
+        WHERE id = ` + placeholder(1) + `
+    `
+	_, err := r.db.Exec(query, id)
+	return err
+}

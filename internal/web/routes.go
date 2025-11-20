@@ -40,4 +40,9 @@ func (c *WebController) RegisterRoutes() {
 	http.HandleFunc("GET /definitions/{group}/{name}", c.RequireAuth(c.definitionByNameHandler))
 	// Create workflow page for a given definition
 	http.HandleFunc("GET /definitions/{name}/create", c.RequireAuth(c.createWorkflowPageHandler))
+	// User management pages
+	http.HandleFunc("GET /users", c.RequireAuth(c.usersHandler))
+	http.HandleFunc("GET /users/create", c.RequireAuth(c.createUserHandler))
+	http.HandleFunc("POST /users/create", c.RequireAuth(c.createUserSubmitHandler))
+	http.HandleFunc("POST /users/{id}/delete", c.RequireAuth(c.deleteUserHandler))
 }

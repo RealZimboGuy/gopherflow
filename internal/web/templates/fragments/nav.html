@@ -15,6 +15,9 @@
     <a href="/definitions" class="block px-6 py-3 text-slate-100 hover:bg-cyan-500/50 hover:text-white transition-colors {{if eq $active "/definitions"}} bg-cyan-600 text-white font-semibold {{end}}">
     Definitions
     </a>
+    <a href="/users" class="block px-6 py-3 text-slate-100 hover:bg-cyan-500/50 hover:text-white transition-colors {{if or (eq $active "/users") (hasPrefix $active "/users/")}} bg-cyan-600 text-white font-semibold {{end}}">
+    Users
+    </a>
     <a href="/settings" class="block px-6 py-3 text-slate-100 hover:bg-cyan-500/50 hover:text-white transition-colors {{if eq $active "/settings"}} bg-cyan-600 text-white font-semibold {{end}}">
     Settings
     </a>
