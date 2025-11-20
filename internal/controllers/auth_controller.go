@@ -1,9 +1,12 @@
 package controllers
 
 import (
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"context"
 	"net/http"
 	"time"
+
+	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 )
 
 type AuthController struct {
@@ -24,6 +27,8 @@ func (wc *AuthController) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		if c, err := r.Cookie("sessionId"); err == nil && c.Value != "" {
 			u, err := wc.UserRepo.FindBySessionID(c.Value, time.Now().UTC())
 			if err == nil && u != nil {
+				ctx := context.WithValue(r.Context(), core.CtxKeyUsername, u.Username)
+				r = r.WithContext(ctx)
 				next(w, r)
 				return
 			}
@@ -34,6 +39,10 @@ func (wc *AuthController) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		if apiKey != "" {
 			u, err := wc.UserRepo.FindByApiKey(apiKey)
 			if err == nil && u != nil {
+
+				// Add the username to the request context
+				ctx := context.WithValue(r.Context(), core.CtxKeyUsername, u.Username)
+				r = r.WithContext(ctx)
 				// Proceed as authenticated
 				next(w, r)
 				return

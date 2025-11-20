@@ -263,3 +263,16 @@ func (r *UserRepository) DeleteById(id int64) error {
 	_, err := r.db.Exec(query, id)
 	return err
 }
+
+// UpdateUser updates a user's username, API key, and enabled status.
+func (r *UserRepository) UpdateUser(id int64, username string, apiKey sql.NullString, enabled sql.NullBool) error {
+	query := `
+        UPDATE users
+        SET username = ` + placeholder(1) + `,
+            api_key = ` + placeholder(2) + `,
+            enabled = ` + placeholder(3) + `
+        WHERE id = ` + placeholder(4) + `
+    `
+	_, err := r.db.Exec(query, username, apiKey, enabled, id)
+	return err
+}

@@ -938,6 +938,10 @@ func (wc *WebController) loginSubmitHandler(w http.ResponseWriter, r *http.Reque
 		wc.renderLogin(w, map[string]any{"Error": "Invalid username or password"})
 		return
 	}
+	if !u.Enabled.Valid || !u.Enabled.Bool {
+		w.WriteHeader(http.StatusUnauthorized)
+		wc.renderLogin(w, map[string]any{"Error": "User is disabled"})
+	}
 	// Compare bcrypt hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)); err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -1046,27 +1050,27 @@ func (wc *WebController) usersHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Convert to view model with masked passwords
 	type userVM struct {
-		ID         int64
-		Username   string 
-		ApiKey     string
-		Created    string
-		Enabled    string
-		SessionID  string
+		ID        int64
+		Username  string
+		ApiKey    string
+		Created   string
+		Enabled   string
+		SessionID string
 	}
 
 	userList := make([]userVM, 0)
 	if users != nil {
 		for _, u := range *users {
 			var apiKey, created, enabled, sessionID string
-			
+
 			if u.ApiKey.Valid {
 				apiKey = u.ApiKey.String
 			}
-			
+
 			if u.Created.Valid {
 				created = u.Created.Time.Local().Format("2006-01-02 15:04:05")
 			}
-			
+
 			if u.Enabled.Valid {
 				if u.Enabled.Bool {
 					enabled = "Yes"
@@ -1074,20 +1078,20 @@ func (wc *WebController) usersHandler(w http.ResponseWriter, r *http.Request) {
 					enabled = "No"
 				}
 			}
-			
+
 			if u.SessionID.Valid {
 				sessionID = "Active"
 			} else {
 				sessionID = "None"
 			}
-			
+
 			userList = append(userList, userVM{
-				ID:         u.ID,
-				Username:   u.Username,
-				ApiKey:     apiKey,
-				Created:    created,
-				Enabled:    enabled,
-				SessionID:  sessionID,
+				ID:        u.ID,
+				Username:  u.Username,
+				ApiKey:    apiKey,
+				Created:   created,
+				Enabled:   enabled,
+				SessionID: sessionID,
 			})
 		}
 	}
@@ -1154,17 +1158,17 @@ func (wc *WebController) createUserSubmitHandler(w http.ResponseWriter, r *http.
 		http.Error(w, "Invalid form submission", http.StatusBadRequest)
 		return
 	}
-	
+
 	username := strings.TrimSpace(r.FormValue("username"))
 	password := r.FormValue("password")
 	apiKey := r.FormValue("apiKey")
 	enabledStr := r.FormValue("enabled")
-	
+
 	if username == "" || password == "" {
 		http.Error(w, "Username and password are required", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Check if username already exists
 	existingUser, err := wc.userRepo.FindByUsername(username)
 	if err != nil {
@@ -1176,7 +1180,7 @@ func (wc *WebController) createUserSubmitHandler(w http.ResponseWriter, r *http.
 		http.Error(w, "Username already exists", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -1184,7 +1188,7 @@ func (wc *WebController) createUserSubmitHandler(w http.ResponseWriter, r *http.
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Create the user
 	user := &domain.User{
 		Username: username,
@@ -1192,18 +1196,171 @@ func (wc *WebController) createUserSubmitHandler(w http.ResponseWriter, r *http.
 		Created:  sql.NullTime{Time: time.Now().UTC(), Valid: true},
 		Enabled:  sql.NullBool{Bool: enabledStr == "on", Valid: true},
 	}
-	
+
 	if apiKey != "" {
 		user.ApiKey = sql.NullString{String: apiKey, Valid: true}
 	}
-	
+
 	_, err = wc.userRepo.Save(user)
 	if err != nil {
 		slog.Error("Failed to create user", "error", err)
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
 	}
-	
+
+	// Redirect to users list
+	http.Redirect(w, r, "/users", http.StatusSeeOther)
+}
+
+// editUserHandler displays the form to edit a user
+func (wc *WebController) editUserHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get the user by ID
+	user, err := wc.userRepo.FindById(id)
+	if err != nil {
+		slog.Error("Error finding user", "id", id, "error", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	if user == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Create view model
+	type userVM struct {
+		ID       int64
+		Username string
+		ApiKey   string
+		Enabled  string
+	}
+
+	vm := userVM{
+		ID:       user.ID,
+		Username: user.Username,
+	}
+
+	if user.ApiKey.Valid {
+		vm.ApiKey = user.ApiKey.String
+	}
+
+	if user.Enabled.Valid {
+		if user.Enabled.Bool {
+			vm.Enabled = "Yes"
+		} else {
+			vm.Enabled = "No"
+		}
+	}
+
+	data := struct {
+		Title       string
+		CurrentPath string
+		User        userVM
+	}{
+		Title:       "Edit User",
+		CurrentPath: r.URL.Path,
+		User:        vm,
+	}
+
+	tmpl, err := template.New("").Funcs(template.FuncMap{"hasPrefix": hasPrefix}).ParseFS(
+		templatesFS,
+		"templates/fragments/header.html",
+		"templates/fragments/nav.html",
+		"templates/users/edit_user.html",
+	)
+	if err != nil {
+		slog.Error("Failed to parse edit user template", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.ExecuteTemplate(w, "edit_user", data); err != nil {
+		slog.Error("Failed to execute edit user template", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// editUserSubmitHandler processes the form submission to update a user
+func (wc *WebController) editUserSubmitHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get the existing user to ensure it exists
+	existingUser, err := wc.userRepo.FindById(id)
+	if err != nil {
+		slog.Error("Error finding user", "id", id, "error", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+	if existingUser == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form submission", http.StatusBadRequest)
+		return
+	}
+
+	username := strings.TrimSpace(r.FormValue("username"))
+	apiKey := r.FormValue("apiKey")
+	enabledStr := r.FormValue("enabled")
+
+	if username == "" {
+		http.Error(w, "Username is required", http.StatusBadRequest)
+		return
+	}
+
+	// Check if username already exists and belongs to a different user
+	if username != existingUser.Username {
+		userWithSameName, err := wc.userRepo.FindByUsername(username)
+		if err != nil {
+			slog.Error("Error checking for existing username", "error", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+		if userWithSameName != nil && userWithSameName.ID != id {
+			http.Error(w, "Username already exists", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Update user values
+	var apiKeyNull sql.NullString
+	if apiKey != "" {
+		apiKeyNull = sql.NullString{String: apiKey, Valid: true}
+	}
+
+	enabled := sql.NullBool{Bool: enabledStr == "on", Valid: true}
+
+	// Save changes
+	err = wc.userRepo.UpdateUser(id, username, apiKeyNull, enabled)
+	if err != nil {
+		slog.Error("Failed to update user", "id", id, "error", err)
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
+		return
+	}
+
 	// Redirect to users list
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }
@@ -1215,13 +1372,13 @@ func (wc *WebController) deleteUserHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "User ID is required", http.StatusBadRequest)
 		return
 	}
-	
+
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Don't allow deleting the currently logged-in user
 	c, err := r.Cookie("sessionId")
 	if err == nil && c.Value != "" {
@@ -1231,7 +1388,7 @@ func (wc *WebController) deleteUserHandler(w http.ResponseWriter, r *http.Reques
 			return
 		}
 	}
-	
+
 	// Check if user exists
 	user, err := wc.userRepo.FindById(id)
 	if err != nil {
@@ -1243,7 +1400,7 @@ func (wc *WebController) deleteUserHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
-	
+
 	// Delete the user
 	err = wc.userRepo.DeleteById(id)
 	if err != nil {
@@ -1251,7 +1408,7 @@ func (wc *WebController) deleteUserHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Redirect to users list
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }

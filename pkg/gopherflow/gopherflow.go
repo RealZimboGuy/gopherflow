@@ -31,12 +31,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type ctxKey string
-
-const ExecutorId ctxKey = "executorId"
-
-//var WorkflowRegistry map[string]func() core.Workflow
-
 // App wires together the workflow engine, repositories, and HTTP server.
 type App struct {
 	DB               *sql.DB
@@ -287,9 +281,14 @@ func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
 	r2.AddAttrs(slog.String("severity", sev))
 
 	// Try to extract request ID from context
-	if reqID := ctx.Value(ExecutorId); reqID != nil {
+	if reqID := ctx.Value(core.CtxKeyExecutorId); reqID != nil {
 		if s, ok := reqID.(string); ok && s != "" {
-			r2.AddAttrs(slog.String("executorId", s))
+			r2.AddAttrs(slog.String(string(core.CtxKeyExecutorId), s))
+		}
+	}
+	if reqID := ctx.Value(core.CtxKeyUsername); reqID != nil {
+		if s, ok := reqID.(string); ok && s != "" {
+			r2.AddAttrs(slog.String(string(core.CtxKeyUsername), s))
 		}
 	}
 

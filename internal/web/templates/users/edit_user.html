@@ -1,0 +1,69 @@
+{{ define "edit_user" }}
+
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+
+    {{ template "header" . }}
+
+</head>
+<body class="bg-sky-50 font-sans leading-normal tracking-normal">
+<div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col">
+        <div class="p-6 text-center font-bold text-lg tracking-wide">
+            <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-cyan-500"></span>
+                GopherFlow
+            </span>
+        </div>
+
+        {{ template "nav" . }}
+
+    </aside>
+
+
+    <!-- Main Content -->
+    <div class="flex flex-col flex-grow overflow-scroll" id="main-content">
+        <!-- Top Bar -->
+        <header class="bg-white shadow-md py-4 px-6 flex justify-start">
+            <h1 class="text-xl font-semibold text-gray-800">Edit User</h1>
+            <div class="ml-auto">
+                <a href="/users" class="inline-block bg-slate-600 text-white px-3 py-1 rounded hover:bg-white hover:text-slate-600 border border-slate-600 transition-colors">
+                    Back to Users
+                </a>
+            </div>
+        </header>
+
+        <main class="p-6 flex-grow">
+            <section class="bg-white rounded shadow-md p-6">
+                <form method="POST" action="/users/{{ .User.ID }}/edit">
+                    <div class="mb-4">
+                        <label for="username" class="block text-gray-700 mb-2">Username</label>
+                        <input type="text" id="username" name="username" required value="{{ .User.Username }}"
+                            class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-gray-800">
+                    </div>
+                    <div class="mb-4">
+                        <label for="apiKey" class="block text-gray-700 mb-2">API Key</label>
+                        <input type="text" id="apiKey" name="apiKey" value="{{ if .User.ApiKey }}{{ .User.ApiKey }}{{ end }}"
+                            class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-gray-800">
+                    </div>
+                    <div class="mb-6">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="enabled" class="mr-2" {{if eq .User.Enabled "Yes"}}checked{{end}}>
+                            <span class="text-gray-700">Enabled</span>
+                        </label>
+                    </div>
+                    <div>
+                        <button type="submit" class="inline-block bg-cyan-600 text-white px-3 py-1 rounded hover:bg-white hover:text-cyan-600 border border-cyan-600 transition-colors">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>
+{{ end }}

@@ -44,5 +44,7 @@ func (c *WebController) RegisterRoutes() {
 	http.HandleFunc("GET /users", c.RequireAuth(c.usersHandler))
 	http.HandleFunc("GET /users/create", c.RequireAuth(c.createUserHandler))
 	http.HandleFunc("POST /users/create", c.RequireAuth(c.createUserSubmitHandler))
+	http.HandleFunc("GET /users/{id}/edit", c.RequireAuth(c.editUserHandler))
+	http.HandleFunc("POST /users/{id}/edit", c.RequireAuth(c.editUserSubmitHandler))
 	http.HandleFunc("POST /users/{id}/delete", c.RequireAuth(c.deleteUserHandler))
 }

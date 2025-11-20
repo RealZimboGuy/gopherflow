@@ -9,6 +9,7 @@ import (
 
 	"github.com/RealZimboGuy/gopherflow/internal/engine"
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 
@@ -78,13 +79,13 @@ func (c *WorkflowsController) handleCreateWorkflow(w http.ResponseWriter, r *htt
 		return
 	}
 
-	err := validateCreateWorkflow(req)
+	err := validateCreateWorkflow(r.Context(), req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err, id := createWorkflow(c, req)
+	err, id := createWorkflow(r.Context(), c, req)
 
 	if err != nil {
 		slog.Error("Failed to save workflow", "error", err)
@@ -99,7 +100,7 @@ func (c *WorkflowsController) handleCreateWorkflow(w http.ResponseWriter, r *htt
 	json.NewEncoder(w).Encode(models.CreateWorkflowResponse{ID: id})
 }
 
-func validateCreateWorkflow(req models.CreateWorkflowRequest) error {
+func validateCreateWorkflow(ctx context.Context, req models.CreateWorkflowRequest) error {
 	// Validate required fields
 	if req.ExternalID == "" || req.ExecutorGroup == "" || req.WorkflowType == "" || req.BusinessKey == "" {
 		return errors.New("externalId, executorGroup, workflowType and businessKey are required")
@@ -107,8 +108,21 @@ func validateCreateWorkflow(req models.CreateWorkflowRequest) error {
 	return nil
 }
 
-func createWorkflow(c *WorkflowsController, req models.CreateWorkflowRequest) (error, int64) {
-	// Validate workflow type exists via engine registry and get initial state
+func createWorkflow(ctx context.Context, c *WorkflowsController, req models.CreateWorkflowRequest) (error, int64) {
+	// Validate workflow type exists via engine registry and get initial stateA
+
+	slog.InfoContext(ctx, "Creating workflow", "externalId", req.ExternalID, "businessKey", req.BusinessKey, "workflowType", req.WorkflowType)
+
+	//add the username of the creating user to the workflow statevars
+	if userName := ctx.Value(core.CtxKeyUsername); userName != nil {
+		if s, ok := userName.(string); ok && s != "" {
+			if req.StateVars == nil {
+				req.StateVars = make(map[string]string)
+			}
+			req.StateVars["createdBy"] = s
+		}
+	}
+
 	wfInstance, err := engine.CreateWorkflowInstance(c.WorkflowManager, req.WorkflowType)
 	if err != nil {
 		return err, 0
@@ -118,6 +132,7 @@ func createWorkflow(c *WorkflowsController, req models.CreateWorkflowRequest) (e
 	//if the external id is a duplicate, we return the existing workflow
 	existing, _ := c.WorkflowRepo.FindByExternalId(req.ExternalID)
 	if existing != nil {
+		slog.WarnContext(ctx, "Workflow already exists", "externalId", req.ExternalID)
 		return nil, existing.ID
 	}
 
@@ -180,7 +195,7 @@ func (c *WorkflowsController) handleCreateAndWaitWorkflow(w http.ResponseWriter,
 		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
 		return
 	}
-	err := validateCreateWorkflow(req.CreateWorkflowRequest)
+	err := validateCreateWorkflow(r.Context(), req.CreateWorkflowRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -194,7 +209,7 @@ func (c *WorkflowsController) handleCreateAndWaitWorkflow(w http.ResponseWriter,
 		req.WaitSeconds = 1
 	}
 
-	err, id := createWorkflow(c, req.CreateWorkflowRequest)
+	err, id := createWorkflow(r.Context(), c, req.CreateWorkflowRequest)
 	c.WorkflowManager.Wakeup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(req.WaitSeconds)*time.Second)
