@@ -4,6 +4,10 @@ Small, pragmatic workflow engine for Go with a built-in web console. Define work
 
 <p align="center"><img src="logo_transparent.png" alt="GopherFlow" style="max-width:300px;"></p>
 
+## Development Tasks in progress
+* linking child->parent workflows to allow for parallel execution and wake up
+
+
 ## Highlights
 
 - Define workflows in Go using a state-machine approach
