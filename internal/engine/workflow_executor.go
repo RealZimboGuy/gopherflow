@@ -151,6 +151,53 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 			_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "SCHEDULE_ACTIVATION", Name: currentState, Text: nextExecutionOffset, DateTime: time.Now()})
 			break
 		}
+		
+		// Process any child workflow requests
+		childWorkflows := results[0].Interface().(*models.NextState).ChildWorkflows
+		if len(childWorkflows) > 0 {
+			for _, childReq := range childWorkflows {
+				slog.InfoContext(ctx, "Creating child workflow", 
+					"parent_id", w.GetWorkflowData().ID, 
+					"type", childReq.WorkflowType,
+					"initial_state", childReq.InitialState,
+					"worker_id", workerID)
+				
+				// Convert state variables to JSON
+				stateVarsJSON := "{}"
+				if childReq.StateVariables != nil && len(childReq.StateVariables) > 0 {
+					stateVarsBytes, err := json.Marshal(childReq.StateVariables)
+					if err != nil {
+						slog.ErrorContext(ctx, "Error marshaling child workflow state variables", "error", err)
+					} else {
+						stateVarsJSON = string(stateVarsBytes)
+					}
+				}
+				
+				// Create child workflow
+				child, err := r.CreateChildWorkflow(
+					w.GetWorkflowData().ID, 
+					childReq.WorkflowType,
+					childReq.InitialState,
+					childReq.BusinessKey,
+					stateVarsJSON,
+				)
+				
+				if err != nil {
+					slog.ErrorContext(ctx, "Error creating child workflow", "error", err)
+					continue
+				}
+				
+				_, _ = wa.Save(&domain.WorkflowAction{
+					WorkflowID: w.GetWorkflowData().ID, 
+					ExecutorID: executorID, 
+					ExecutionCount: w.GetWorkflowData().RetryCount, 
+					Type: "CHILD_CREATED", 
+					Name: currentState, 
+					Text: fmt.Sprintf("Created child workflow ID %d of type %s", child.ID, childReq.WorkflowType), 
+					DateTime: time.Now(),
+				})
+			}
+		}
 
 	}
 
