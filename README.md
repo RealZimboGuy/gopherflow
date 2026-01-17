@@ -4,10 +4,6 @@ Small, pragmatic workflow engine for Go with a built-in web console. Define work
 
 <p align="center"><img src="logo_transparent.png" alt="GopherFlow" style="max-width:300px;"></p>
 
-## Development Tasks in progress
-* linking child->parent workflows to allow for parallel execution and wake up
-
-
 ## Highlights
 
 - Define workflows in Go using a state-machine approach
@@ -17,6 +13,12 @@ Small, pragmatic workflow engine for Go with a built-in web console. Define work
 - Web console (dashboard, search, definitions with diagrams, executors, details)
 - Mermaid-like flow visualization generated from workflow definitions
 - Container-friendly, single-binary deployment
+- Parent / Child Workflows
+- - GopherFlow supports parent workflows spawning child workflows, allowing for parallel execution and coordination.
+- - **Spawn Children**: A parent workflow can create multiple child workflow requests.
+- - **Wait & Wake**: The parent can wait for children to complete. Children can explicitly wake their parent when they reach a certain state or finish.
+- - **Parallel Execution**: Child workflows run independently and in parallel.
+
 
 ## Quick start
 
@@ -213,5 +215,57 @@ defer resp.Body.Close()
     if err := app.Run(ctx); err != nil {
         slog.Error("Engine exited with error", "error", err)
     }
+}
+```
+
+### Example: Spawning Children
+
+In your parent workflow state transition:
+
+```go
+func (w *MyParentWorkflow) SpawnChildren(ctx context.Context) (*models.NextState, error) {
+    // Create child workflow requests
+    childRequests := []models.ChildWorkflowRequest{
+        gopherflow.CreateChildWorkflowRequest(
+            "MyChildWorkflow",
+            fmt.Sprintf("child-%d", w.WorkflowState.ID),
+            "ChildInit",
+            map[string]string{"input": "value"},
+        ),
+    }
+
+    return &models.NextState{
+        Name:           "WaitForChildren",
+        ChildWorkflows: childRequests,
+    }, nil
+}
+```
+
+### Example: Waiting for Children
+
+```go
+func (w *MyParentWorkflow) WaitForChildren(ctx context.Context) (*models.NextState, error) {
+    children, err := w.GetChildWorkflows(ctx)
+    if err != nil {
+        return nil, err
+    }
+
+    allComplete := true
+    for _, child := range children {
+        if child.Status != models.WorkflowStatusFinished {
+            allComplete = false
+            break
+        }
+    }
+
+    if !allComplete {
+        // Wait and check again later
+        return &models.NextState{
+            Name:                "WaitForChildren",
+            NextExecutionOffset: "1 minute",
+        }, nil
+    }
+
+    return &models.NextState{Name: "Finish"}, nil
 }
 ```

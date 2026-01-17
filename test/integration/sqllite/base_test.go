@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"sync/atomic"
 	"testing"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var portBase int32 = 9018 // starting port number (can be anything safe)
@@ -14,7 +16,7 @@ var portBase int32 = 9018 // starting port number (can be anything safe)
 func nextPort() int {
 	return int(atomic.AddInt32(&portBase, 1))
 }
-func runTestWithSetup(t *testing.T, testFunc func(t *testing.T, port int)) {
+func RunTestWithSetup(t *testing.T, testFunc func(t *testing.T, port int)) {
 	port := nextPort()
 	filename := fmt.Sprintf("gopherflow-test-%d.db", port)
 	defer os.Remove(filename)

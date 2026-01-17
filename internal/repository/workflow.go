@@ -44,11 +44,78 @@ type DefinitionStateRow struct {
 
 const ALL_COLUMNS = ` id, status, execution_count, retry_count, created, modified,
 		       next_activation, started, executor_id, executor_group,
-		       workflow_type, external_id, business_key, state, state_vars `
+		       workflow_type, external_id, business_key, state, state_vars, parent_workflow_id `
 
 func NewWorkflowRepository(db *sql.DB, clock core.Clock) *WorkflowRepository {
 	return &WorkflowRepository{db: db, clock: clock}
 }
+
+// WakeParentWorkflow sets a parent workflow's next_activation to now
+func (r *WorkflowRepository) WakeParentWorkflow(parentID int64) error {
+	now := r.clock.Now()
+	query := `
+		UPDATE workflow 
+		SET next_activation = ` + placeholder(1) + ` 
+		WHERE id = ` + placeholder(2) + ` 
+		AND status IN ('IN_PROGRESS')
+	`
+
+	_, err := r.db.Exec(query, formatDateInDatabase(now), parentID)
+	if err != nil {
+		return fmt.Errorf("failed to wake parent workflow: %w", err)
+	}
+
+	return nil
+}
+
+// GetChildrenByParentID retrieves all child workflows for a given parent ID
+func (r *WorkflowRepository) GetChildrenByParentID(parentID int64, onlyActive bool) (*[]domain.Workflow, error) {
+	query := `
+		SELECT ` + ALL_COLUMNS + `
+		FROM workflow 
+		WHERE parent_workflow_id = ` + placeholder(1)
+
+	// Add filter for active workflows if requested
+	if onlyActive {
+		query += ` AND status IN ('NEW', 'IN_PROGRESS')`
+	}
+
+	rows, err := r.db.Query(query, parentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get child workflows: %w", err)
+	}
+	defer rows.Close()
+
+	var workflows []domain.Workflow
+	for rows.Next() {
+		var wf domain.Workflow
+		err := rows.Scan(
+			&wf.ID,
+			&wf.Status,
+			&wf.ExecutionCount,
+			&wf.RetryCount,
+			&wf.Created,
+			&wf.Modified,
+			&wf.NextActivation,
+			&wf.Started,
+			&wf.ExecutorID,
+			&wf.ExecutorGroup,
+			&wf.WorkflowType,
+			&wf.ExternalID,
+			&wf.BusinessKey,
+			&wf.State,
+			&wf.StateVars,
+			&wf.ParentWorkflowID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan child workflow: %w", err)
+		}
+		workflows = append(workflows, wf)
+	}
+
+	return &workflows, nil
+}
+
 
 func (r *WorkflowRepository) FindByID(id int64) (*domain.Workflow, error) {
 	query := `
@@ -73,6 +140,7 @@ func (r *WorkflowRepository) FindByID(id int64) (*domain.Workflow, error) {
 		&wf.BusinessKey,
 		&wf.State,
 		&wf.StateVars,
+		&wf.ParentWorkflowID,
 	)
 
 	if err != nil {
@@ -103,7 +171,7 @@ func toLocalSqlTime(t sql.NullTime) sql.NullTime {
 func (r *WorkflowRepository) Save(wf *domain.Workflow) (int64, error) {
 	// Build dialect-aware placeholders
 	vals := []interface{}{wf.Status, wf.ExecutionCount, wf.RetryCount, formatDateInDatabase(wf.Created), formatDateInDatabase(wf.Modified), formatDateInDatabaseNull(wf.NextActivation), formatDateInDatabaseNull(wf.Started), wf.ExecutorID, wf.ExecutorGroup, wf.WorkflowType, wf.ExternalID, wf.BusinessKey, wf.State,
-		wf.StateVars}
+		wf.StateVars, wf.ParentWorkflowID}
 	pps := make([]string, 0, len(vals))
 	for i := range vals {
 		pps = append(pps, placeholder(i+1))
@@ -111,7 +179,8 @@ func (r *WorkflowRepository) Save(wf *domain.Workflow) (int64, error) {
 	base := `INSERT INTO workflow (
 		status, execution_count, retry_count, created, modified,
 		next_activation, started, executor_id, executor_group,
-		workflow_type, external_id, business_key, state, state_vars
+		workflow_type, external_id, business_key, state, state_vars,
+		parent_workflow_id
 	) VALUES (` + strings.Join(pps, ", ") + `)`
 	var err error
 	if supportsReturning() {
@@ -201,6 +270,7 @@ func (r *WorkflowRepository) FindPendingWorkflows(size int, executorGroup string
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		)
 		if err != nil {
 			return nil, err
@@ -404,6 +474,7 @@ func (r *WorkflowRepository) FindByExternalId(id string) (*domain.Workflow, erro
 		&wf.BusinessKey,
 		&wf.State,
 		&wf.StateVars,
+		&wf.ParentWorkflowID,
 	)
 	if err != nil {
 		return nil, err
@@ -508,6 +579,7 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		)
 		if err != nil {
 			return nil, err
@@ -570,6 +642,7 @@ func (r *WorkflowRepository) SearchWorkflows(req models.SearchWorkflowRequest) (
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		)
 		if err != nil {
 			return nil, err
@@ -674,6 +747,7 @@ func (r *WorkflowRepository) GetTopExecuting(limit int) (*[]domain.Workflow, err
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		); err != nil {
 			return nil, err
 		}
@@ -715,6 +789,7 @@ func (r *WorkflowRepository) GetNextToExecute(limit int) (*[]domain.Workflow, er
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		); err != nil {
 			return nil, err
 		}

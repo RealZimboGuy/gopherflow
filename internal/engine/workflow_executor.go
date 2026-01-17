@@ -2,22 +2,39 @@ package engine
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"reflect"
 	"time"
 
+	"github.com/RealZimboGuy/gopherflow/internal/config"
 	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
+	"github.com/google/uuid"
 )
 
 // Engine runs a workflow
 func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string) {
 
 	slog.InfoContext(ctx, "Running workflow", "workflow_id", w.GetWorkflowData().ID, "worker_id", workerID)
+
+	if w.GetWorkflowData().ID > 0 {
+		children, err := r.GetChildrenByParentID(w.GetWorkflowData().ID, false)
+		if err != nil {
+			slog.WarnContext(ctx, "Failed to load child workflows", "error", err, "workflow_id", w.GetWorkflowData().ID)
+		} else if children != nil && len(*children) > 0 {
+			// Set children on the workflow instance if it supports it
+			if setter, ok := w.(interface{ SetChildWorkflows([]domain.Workflow) }); ok {
+				setter.SetChildWorkflows(*children)
+				slog.InfoContext(ctx, "Loaded child workflows", "count", len(*children), "workflow_id", w.GetWorkflowData().ID)
+			}
+		}
+	}
+
 	err := r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "EXECUTING")
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "EXECUTING", Name: "EXECUTING", Text: "EXECUTING", DateTime: time.Now()})
 
@@ -30,6 +47,11 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 
 	//the database determines where we are and start at
 	currentState := w.GetWorkflowData().State
+
+	//if no current state then set to the initial state
+	if currentState == "" {
+		currentState = w.InitialState()
+	}
 
 	//if we are on the starting state then update the starting time
 	if currentState == w.InitialState() {
@@ -126,6 +148,88 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 
 		if nextStateObject.ActionLog != "" {
 			_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "LOG", Name: currentState, Text: nextStateObject.ActionLog, DateTime: time.Now()})
+		}
+
+		//wake up parent if set
+		if results[0].Interface().(*models.NextState).WakeParent {
+			if w.GetWorkflowData().ParentWorkflowID.Valid {
+				slog.InfoContext(ctx, "Waking up parent workflow", "workflow_id", w.GetWorkflowData().ID, "worker_id", workerID)
+				_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ParentWorkflowID.Int64, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "CHILD_WAKE", Name: currentState, Text: "Child Initiated Wake", DateTime: time.Now()})
+				err := r.WakeParentWorkflow(w.GetWorkflowData().ParentWorkflowID.Int64)
+				if err != nil {
+					slog.ErrorContext(ctx, "Error waking up parent workflow", "error", err, "worker_id", workerID)
+				}
+			}
+		}
+
+		// Process any child workflow requests
+		childWorkflows := results[0].Interface().(*models.NextState).ChildWorkflows
+		if len(childWorkflows) > 0 {
+			slog.InfoContext(ctx, "Processing child workflow requests", "workflow_id", w.GetWorkflowData().ID, "count", len(childWorkflows), "worker_id", workerID)
+			for _, childReq := range childWorkflows {
+
+				//if the externalId is not set then set to a uuid
+				if childReq.ExternalId == "" {
+					uuid, _ := uuid.NewUUID()
+					childReq.ExternalId = uuid.String()
+				}
+
+				slog.InfoContext(ctx, "Creating child workflow",
+					"parent_id", w.GetWorkflowData().ID,
+					"type", childReq.WorkflowType,
+					"initial_state", childReq.InitialState,
+					"worker_id", workerID)
+
+				// Convert state variables to JSON
+				stateVarsJSON := "{}"
+				if childReq.StateVariables != nil && len(childReq.StateVariables) > 0 {
+					stateVarsBytes, err := json.Marshal(childReq.StateVariables)
+					if err != nil {
+						slog.ErrorContext(ctx, "Error marshaling child workflow state variables", "error", err)
+					} else {
+						stateVarsJSON = string(stateVarsBytes)
+					}
+				}
+
+				// Create child workflow directly using Save
+				childWf := &domain.Workflow{
+					Status:           "NEW",
+					ExecutionCount:   0,
+					RetryCount:       0,
+					Created:          time.Now(),
+					Modified:         time.Now(),
+					NextActivation:   sql.NullTime{Time: time.Now(), Valid: true},
+					ExecutorGroup:    config.GetSystemSettingString(config.ENGINE_EXECUTOR_GROUP),
+					ExternalID:       childReq.ExternalId,
+					WorkflowType:     childReq.WorkflowType,
+					BusinessKey:      childReq.BusinessKey,
+					StateVars:        sql.NullString{String: stateVarsJSON, Valid: stateVarsJSON != ""},
+					ParentWorkflowID: sql.NullInt64{Int64: w.GetWorkflowData().ID, Valid: true},
+				}
+
+				childID, err := r.Save(childWf)
+				if err != nil {
+					slog.ErrorContext(ctx, "Error creating child workflow", "error", err)
+					continue
+				}
+
+				child, err := r.FindByID(childID)
+
+				if err != nil {
+					slog.ErrorContext(ctx, "Error creating child workflow", "error", err)
+					continue
+				}
+
+				_, _ = wa.Save(&domain.WorkflowAction{
+					WorkflowID:     w.GetWorkflowData().ID,
+					ExecutorID:     executorID,
+					ExecutionCount: w.GetWorkflowData().RetryCount,
+					Type:           "CHILD_CREATED",
+					Name:           currentState,
+					Text:           fmt.Sprintf("Created child workflow ID %d of type %s", child.ID, childReq.WorkflowType),
+					DateTime:       time.Now(),
+				})
+			}
 		}
 
 		nextExecution := nextStateObject.NextExecution

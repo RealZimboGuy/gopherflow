@@ -16,10 +16,10 @@ import (
 )
 
 func TestStartupAppAndGetExecutor(t *testing.T) {
-	runTestWithSetup(t, func(t *testing.T, port int) {
+	RunTestWithSetup(t, func(t *testing.T, port int) {
 
 		clock := integration.NewFakeClock(time.Now())
-		gopherflow.SetupLoggerWithClock(slog.LevelInfo, clock)
+		gopherflow.SetupLoggerWithClock(slog.LevelWarn, clock)
 		workflowRegistry := map[string]func() core.Workflow{
 			"DemoWorkflow": func() core.Workflow {
 				return &workflows.DemoWorkflow{
@@ -38,6 +38,9 @@ func TestStartupAppAndGetExecutor(t *testing.T) {
 				slog.Error("Engine exited with error", "error", err)
 			}
 		}()
+
+		//wait 3 seconds
+		time.Sleep(3 * time.Second)
 
 		clock.Add(time.Duration(8) * time.Minute)
 

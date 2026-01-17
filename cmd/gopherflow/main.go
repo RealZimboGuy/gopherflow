@@ -29,6 +29,17 @@ func main() {
 				// MyService: myService,
 			}
 		},
+		// Parent-Child Demo Workflows
+		"DemoParentWorkflow": func() core.Workflow {
+			return &workflows.DemoParentWorkflow{
+				Clock: core.NewRealClock(),
+			}
+		},
+		"DemoChildWorkflow": func() core.Workflow {
+			return &workflows.DemoChildWorkflow{
+				Clock: core.NewRealClock(),
+			}
+		},
 	}
 
 	app := gopherflow.Setup(workflowRegistry)

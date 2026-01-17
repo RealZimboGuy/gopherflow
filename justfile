@@ -23,3 +23,8 @@ git:
 
 push:
   docker push juliangpurse/gopherflow:{{VERSION}}
+
+# may be required
+# go install gotest.tools/gotestsum@latest
+integration-test:
+     gotestsum --format short-verbose ./test/integration/...

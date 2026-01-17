@@ -88,6 +88,25 @@
                         <td class="px-4 py-2 text-gray-800">Started At</td>
                         <td class="px-4 py-2 text-gray-800">{{ .Workflow.StartedAt }}</td>
                     </tr>
+                    {{- if .Workflow.ParentWorkflowID.Valid }}
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Parent ID</td>
+                        <td class="px-4 py-2 text-gray-800">
+                            <a href="/details/{{ .Workflow.ParentWorkflowID.Int64 }}" class="text-blue-600 hover:text-blue-800 hover:underline">{{ .Workflow.ParentWorkflowID.Int64 }}</a>
+                        </td>
+                    </tr>
+                    {{- end }}
+                    {{- if .ChildWorkflows }}
+                    <tr class="border-b">
+                        <td class="px-4 py-2 text-gray-800">Child Workflows</td>
+                        <td class="px-4 py-2 text-gray-800">
+                            {{- range $index, $child := .ChildWorkflows }}
+                            {{- if $index }}&nbsp;&nbsp;{{- end }}
+                            <a href="/details/{{ $child.ID }}" class="text-blue-600 hover:text-blue-800 hover:underline">{{ $child.ID }}</a>
+                            {{- end }}
+                        </td>
+                    </tr>
+                    {{- end }}
                     </tbody>
                 </table>
             </section>

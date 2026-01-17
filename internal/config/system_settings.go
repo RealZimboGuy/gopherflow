@@ -24,7 +24,10 @@ const DATABASE_TYPE_SQLLITE = "SQLLITE"
 func GetSystemSettingInteger(settingKey string) int {
 	val := GetSystemSettingString(settingKey)
 	if val != "" {
-		intValue, _ := strconv.Atoi(val)
+		intValue, err := strconv.Atoi(val)
+		if err != nil {
+			panic("Invalid configuration for " + settingKey + ": " + val + " is not an integer")
+		}
 		return intValue
 	}
 
