@@ -172,7 +172,7 @@ func (w *DemoParentWorkflow) ParentWaitForChildren(ctx context.Context) (*models
 		return &models.NextState{
 			Name:                ParentWaitForChildren,
 			ActionLog:           fmt.Sprintf("Waiting for children: %d/%d complete", completedCount, expectedChildren),
-			NextExecutionOffset: "5 seconds",
+			NextExecutionOffset: "10 minutes",
 		}, nil
 	}
 

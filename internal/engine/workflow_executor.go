@@ -148,6 +148,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 		if results[0].Interface().(*models.NextState).WakeParent {
 			if w.GetWorkflowData().ParentWorkflowID.Valid {
 				slog.InfoContext(ctx, "Waking up parent workflow", "workflow_id", w.GetWorkflowData().ID, "worker_id", workerID)
+				_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ParentWorkflowID.Int64, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "CHILD_WAKE", Name: currentState, Text: "Child Initiated Wake", DateTime: time.Now()})
 				err := r.WakeParentWorkflow(w.GetWorkflowData().ParentWorkflowID.Int64)
 				if err != nil {
 					slog.ErrorContext(ctx, "Error waking up parent workflow", "error", err, "worker_id", workerID)

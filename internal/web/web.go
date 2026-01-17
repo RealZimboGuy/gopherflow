@@ -298,18 +298,19 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 	// Load workflow actions for rendering
 	actions, _ := wc.manager.WorkflowActionRepo.FindAllByWorkflowID(int64(id))
 
-	type workflowVM struct {
-		ID             int64
-		BusinessKey    string
-		ExternalId     string
-		Status         string
-		State          string
-		ExecutorID     string
-		Created        string
-		Modified       string
-		NextActivation string
-		StartedAt      string
-	}
+ type workflowVM struct {
+ 	ID               int64
+ 	BusinessKey      string
+ 	ExternalId       string
+ 	Status           string
+ 	State            string
+ 	ExecutorID       string
+ 	Created          string
+ 	Modified         string
+ 	NextActivation   string
+ 	StartedAt        string
+ 	ParentWorkflowID sql.NullInt64
+ }
 	// Format times safely
 	formatTS := func(t time.Time) string { return t.Local().Format("2006-01-02 15:04:05") }
 	var nextAct = getNextActivationString(*wf)
@@ -320,16 +321,17 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 		startedAt = "-"
 	}
 	wvm := workflowVM{
-		ID:             wf.ID,
-		BusinessKey:    wf.BusinessKey,
-		ExternalId:     wf.ExternalID,
-		Status:         wf.Status,
-		State:          wf.State,
-		ExecutorID:     wf.ExecutorID.String,
-		Created:        formatTS(wf.Created),
-		Modified:       formatTS(wf.Modified),
-		NextActivation: nextAct,
-		StartedAt:      startedAt,
+		ID:               wf.ID,
+		BusinessKey:      wf.BusinessKey,
+		ExternalId:       wf.ExternalID,
+		Status:           wf.Status,
+		State:            wf.State,
+		ExecutorID:       wf.ExecutorID.String,
+		Created:          formatTS(wf.Created),
+		Modified:         formatTS(wf.Modified),
+		NextActivation:   nextAct,
+		StartedAt:        startedAt,
+		ParentWorkflowID: wf.ParentWorkflowID,
 	}
 
 	type defVM struct {
@@ -378,16 +380,17 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 	}
 
 	type stateOption struct{ Name string }
-	type detailModel struct {
-		Title              string
-		RequestURI         string
-		CurrentPath        string
-		Workflow           workflowVM
-		WorkflowDefinition defVM
-		Actions            []actionVM
-		StateVars          map[string]string
-		States             []stateOption
-	}
+ type detailModel struct {
+ 	Title              string
+ 	RequestURI         string
+ 	CurrentPath        string
+ 	Workflow           workflowVM
+ 	WorkflowDefinition defVM
+ 	Actions            []actionVM
+ 	StateVars          map[string]string
+ 	States             []stateOption
+ 	ChildWorkflows     []workflowVM
+ }
 
 	// Build States options from workflow definition if available (fallback: current state only)
 	var stateOptions []stateOption
@@ -402,6 +405,33 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 		stateOptions = []stateOption{{Name: wf.State}}
 	}
 
+	// Fetch child workflows if any
+	var childWorkflowsVM []workflowVM
+	childWorkflows, err := wc.manager.WorkflowRepo.GetChildrenByParentID(wf.ID, false)
+	if err == nil && childWorkflows != nil && len(*childWorkflows) > 0 {
+		for _, child := range *childWorkflows {
+			var childStarted string
+			if child.Started.Valid {
+				childStarted = formatTS(child.Started.Time)
+			} else {
+				childStarted = "-"
+			}
+			childWorkflowsVM = append(childWorkflowsVM, workflowVM{
+				ID:               child.ID,
+				BusinessKey:      child.BusinessKey,
+				ExternalId:       child.ExternalID,
+				Status:           child.Status,
+				State:            child.State,
+				ExecutorID:       child.ExecutorID.String,
+				Created:          formatTS(child.Created),
+				Modified:         formatTS(child.Modified),
+				NextActivation:   getNextActivationString(child),
+				StartedAt:        childStarted,
+				ParentWorkflowID: child.ParentWorkflowID,
+			})
+		}
+	}
+
 	data := detailModel{
 		Title:              fmt.Sprintf("Workflow %d - %s", wf.ID, wf.WorkflowType),
 		RequestURI:         r.URL.Path,
@@ -411,6 +441,7 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 		Actions:            actionRows,
 		StateVars:          stateVars,
 		States:             stateOptions,
+		ChildWorkflows:     childWorkflowsVM,
 	}
 
 	// Full page render when not HTMX: include header/nav and wrap content so direct URL has full layout
