@@ -44,10 +44,7 @@ type DefinitionStateRow struct {
 
 const ALL_COLUMNS = ` id, status, execution_count, retry_count, created, modified,
 		       next_activation, started, executor_id, executor_group,
-		       workflow_type, external_id, business_key, state, state_vars `
-
-// Full columns including parent relationship
-const ALL_COLUMNS_WITH_PARENT = ALL_COLUMNS + `, parent_workflow_id `
+		       workflow_type, external_id, business_key, state, state_vars, parent_workflow_id `
 
 func NewWorkflowRepository(db *sql.DB, clock core.Clock) *WorkflowRepository {
 	return &WorkflowRepository{db: db, clock: clock}
@@ -60,7 +57,7 @@ func (r *WorkflowRepository) WakeParentWorkflow(parentID int64) error {
 		UPDATE workflow 
 		SET next_activation = ` + placeholder(1) + ` 
 		WHERE id = ` + placeholder(2) + ` 
-		AND status IN ('NEW', 'IN_PROGRESS')
+		AND status IN ('IN_PROGRESS')
 	`
 
 	_, err := r.db.Exec(query, formatDateInDatabase(now), parentID)
@@ -74,7 +71,7 @@ func (r *WorkflowRepository) WakeParentWorkflow(parentID int64) error {
 // GetChildrenByParentID retrieves all child workflows for a given parent ID
 func (r *WorkflowRepository) GetChildrenByParentID(parentID int64, onlyActive bool) (*[]domain.Workflow, error) {
 	query := `
-		SELECT ` + ALL_COLUMNS_WITH_PARENT + `
+		SELECT ` + ALL_COLUMNS + `
 		FROM workflow 
 		WHERE parent_workflow_id = ` + placeholder(1)
 
@@ -120,7 +117,7 @@ func (r *WorkflowRepository) GetChildrenByParentID(parentID int64, onlyActive bo
 }
 
 // CreateChildWorkflow creates a new child workflow with the parent ID set
-func (r *WorkflowRepository) CreateChildWorkflow(parentID int64, workflowType string, initialState string, businessKey string, stateVars string) (*domain.Workflow, error) {
+func (r *WorkflowRepository) CreateChildWorkflow(parentID int64, workflowType string, initialState string, businessKey string, externalId string, executorGroup string, stateVars string) (*domain.Workflow, error) {
 	// Create a new workflow
 	wf := &domain.Workflow{
 		Status:           "NEW",
@@ -129,7 +126,8 @@ func (r *WorkflowRepository) CreateChildWorkflow(parentID int64, workflowType st
 		Created:          r.clock.Now(),
 		Modified:         r.clock.Now(),
 		NextActivation:   sql.NullTime{Time: r.clock.Now(), Valid: true},
-		ExecutorGroup:    "DEFAULT",
+		ExecutorGroup:    executorGroup,
+		ExternalID:       externalId,
 		WorkflowType:     workflowType,
 		BusinessKey:      businessKey,
 		State:            initialState,
@@ -149,7 +147,7 @@ func (r *WorkflowRepository) CreateChildWorkflow(parentID int64, workflowType st
 
 func (r *WorkflowRepository) FindByID(id int64) (*domain.Workflow, error) {
 	query := `
-		SELECT ` + ALL_COLUMNS_WITH_PARENT + `
+		SELECT ` + ALL_COLUMNS + `
 		FROM workflow WHERE id = ` + placeholder(1) + `
 	`
 
@@ -300,6 +298,7 @@ func (r *WorkflowRepository) FindPendingWorkflows(size int, executorGroup string
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		)
 		if err != nil {
 			return nil, err
@@ -503,6 +502,7 @@ func (r *WorkflowRepository) FindByExternalId(id string) (*domain.Workflow, erro
 		&wf.BusinessKey,
 		&wf.State,
 		&wf.StateVars,
+		&wf.ParentWorkflowID,
 	)
 	if err != nil {
 		return nil, err
@@ -607,6 +607,7 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		)
 		if err != nil {
 			return nil, err
@@ -669,6 +670,7 @@ func (r *WorkflowRepository) SearchWorkflows(req models.SearchWorkflowRequest) (
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		)
 		if err != nil {
 			return nil, err
@@ -773,6 +775,7 @@ func (r *WorkflowRepository) GetTopExecuting(limit int) (*[]domain.Workflow, err
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		); err != nil {
 			return nil, err
 		}
@@ -814,6 +817,7 @@ func (r *WorkflowRepository) GetNextToExecute(limit int) (*[]domain.Workflow, er
 			&wf.BusinessKey,
 			&wf.State,
 			&wf.StateVars,
+			&wf.ParentWorkflowID,
 		); err != nil {
 			return nil, err
 		}

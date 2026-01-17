@@ -11,6 +11,7 @@ import (
 type BaseWorkflow struct {
 	StateVariables map[string]string
 	WorkflowState  *domain.Workflow
+	ChildWorkflows []domain.Workflow
 }
 
 // Setup initializes the base workflow with the given workflow instance and parses state variables from JSON, if present.
@@ -29,4 +30,7 @@ func (b *BaseWorkflow) Setup(wf *domain.Workflow) {
 			slog.Error("Error parsing state vars", "error", err)
 		}
 	}
+}
+func (b *BaseWorkflow) SetChildWorkflows(children []domain.Workflow) {
+	b.ChildWorkflows = children
 }
