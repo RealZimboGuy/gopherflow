@@ -1,0 +1,677 @@
+{
+  "info": {
+    "_postman_id": "f31a35e8-ddeb-4668-9203-2d4359b27cdc",
+    "name": "gopherflow rest API V1.5.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "3507534"
+  },
+  "item": [
+    {
+      "name": "get definitions",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/definitions",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "definitions"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "workflow getIP",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"externalId\": \"{{$guid}}\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"businessKey\": \"123822824s34\",\n    \"NextActivation\": \"2025-09-20T12:52:00.000Z\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/workflows",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "workflows"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 17 Jan 2026 13:37:48 GMT"
+            },
+            {
+              "key": "Content-Length",
+              "value": "10"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"id\": 13\n}"
+        }
+      ]
+    },
+    {
+      "name": "workflow create getIP",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"externalId\": \"{{$guid}}\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"businessKey\": \"123822824s34\",\n    \"NextActivation\": \"2025-09-20T12:52:00.000Z\"\n  }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/workflows",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "workflows"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "workflow getIP",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"externalId\": \"{{$guid}}\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"businessKey\": \"123822824s34\",\n    \"NextActivation\": \"2025-09-20T12:52:00.000Z\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/workflows",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "workflows"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": null,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 17 Jan 2026 13:37:48 GMT"
+            },
+            {
+              "key": "Content-Length",
+              "value": "10"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"id\": 13\n}"
+        }
+      ]
+    },
+    {
+      "name": "workflow get details",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/workflows/15",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "workflows",
+            "15"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "20c001f8-63a0-416c-8d2f-fe169e41e008",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "workflow get details",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/workflows/15",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "workflows",
+                "15"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "20c001f8-63a0-416c-8d2f-fe169e41e008",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 17 Jan 2026 13:55:55 GMT"
+            },
+            {
+              "key": "Content-Length",
+              "value": "446"
+            }
+          ],
+          "cookie": [
+            {
+              "expires": "Invalid Date",
+              "domain": "",
+              "path": ""
+            }
+          ],
+          "body": "{\n    \"id\": 15,\n    \"status\": \"FINISHED\",\n    \"executionCount\": 0,\n    \"retryCount\": 0,\n    \"created\": \"2026-01-17T13:41:55.145Z\",\n    \"modified\": \"2026-01-17T13:43:39.212Z\",\n    \"nextActivation\": \"2026-01-17T13:43:37.275Z\",\n    \"started\": \"2026-01-17T13:41:57.162Z\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"externalId\": \"20c001f8-63a0-416c-8d2f-fe169e41e008\",\n    \"businessKey\": \"123822824s34\",\n    \"state\": \"Finish\",\n    \"stateVars\": {\n        \"createdBy\": \"admin\",\n        \"ip\": \"127.0.71.100\\n\",\n        \"name\": \"test\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "workflow get details by external Id",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/workflowByExternalId/20c001f8-63a0-416c-8d2f-fe169e41e008",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "workflowByExternalId",
+            "20c001f8-63a0-416c-8d2f-fe169e41e008"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "20c001f8-63a0-416c-8d2f-fe169e41e008",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "workflow get details",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/workflows/15",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "workflows",
+                "15"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "20c001f8-63a0-416c-8d2f-fe169e41e008",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 17 Jan 2026 13:55:55 GMT"
+            },
+            {
+              "key": "Content-Length",
+              "value": "446"
+            }
+          ],
+          "cookie": [
+            {
+              "expires": "Invalid Date",
+              "domain": "",
+              "path": ""
+            }
+          ],
+          "body": "{\n    \"id\": 15,\n    \"status\": \"FINISHED\",\n    \"executionCount\": 0,\n    \"retryCount\": 0,\n    \"created\": \"2026-01-17T13:41:55.145Z\",\n    \"modified\": \"2026-01-17T13:43:39.212Z\",\n    \"nextActivation\": \"2026-01-17T13:43:37.275Z\",\n    \"started\": \"2026-01-17T13:41:57.162Z\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"externalId\": \"20c001f8-63a0-416c-8d2f-fe169e41e008\",\n    \"businessKey\": \"123822824s34\",\n    \"state\": \"Finish\",\n    \"stateVars\": {\n        \"createdBy\": \"admin\",\n        \"ip\": \"127.0.71.100\\n\",\n        \"name\": \"test\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "search",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 0,\n  \"externalId\": \"20c001f8-63a0-416c-8d2f-fe169e41e008\",\n  \"executorGroup\": \"\",\n  \"workflowType\": \"\",\n  \"businessKey\": \"\",\n  \"state\": \"\",\n  \"status\": \"\",\n  \"limit\": 0,\n  \"offset\": 0\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/workflows/search",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "workflows",
+            "search"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "search",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 0,\n  \"externalId\": \"20c001f8-63a0-416c-8d2f-fe169e41e008\",\n  \"executorGroup\": \"\",\n  \"workflowType\": \"\",\n  \"businessKey\": \"\",\n  \"state\": \"\",\n  \"status\": \"\",\n  \"limit\": 0,\n  \"offset\": 0\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/workflows/search",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "workflows",
+                "search"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 17 Jan 2026 14:05:35 GMT"
+            },
+            {
+              "key": "Content-Length",
+              "value": "654"
+            }
+          ],
+          "cookie": [
+            {
+              "expires": "Invalid Date",
+              "domain": "",
+              "path": ""
+            }
+          ],
+          "body": "{\n    \"results\": 1,\n    \"workflows\": [\n        {\n            \"ID\": 15,\n            \"Status\": \"FINISHED\",\n            \"ExecutionCount\": 0,\n            \"RetryCount\": 0,\n            \"Created\": \"2026-01-17T13:41:55.145Z\",\n            \"Modified\": \"2026-01-17T13:43:39.212Z\",\n            \"NextActivation\": {\n                \"Time\": \"2026-01-17T13:43:37.275Z\",\n                \"Valid\": true\n            },\n            \"Started\": {\n                \"Time\": \"2026-01-17T13:41:57.162Z\",\n                \"Valid\": true\n            },\n            \"ExecutorID\": {\n                \"String\": \"\",\n                \"Valid\": false\n            },\n            \"ExecutorGroup\": \"default\",\n            \"WorkflowType\": \"GetIpWorkflow\",\n            \"ExternalID\": \"20c001f8-63a0-416c-8d2f-fe169e41e008\",\n            \"BusinessKey\": \"123822824s34\",\n            \"State\": \"Finish\",\n            \"StateVars\": {\n                \"String\": \"{\\\"createdBy\\\":\\\"admin\\\",\\\"ip\\\":\\\"127.0.71.100\\\\n\\\",\\\"name\\\":\\\"test\\\"}\",\n                \"Valid\": true\n            },\n            \"ParentWorkflowID\": {\n                \"Int64\": 0,\n                \"Valid\": false\n            }\n        }\n    ],\n    \"offset\": 0\n}"
+        }
+      ]
+    },
+    {
+      "name": "workflow create and wait",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \n    \"waitSeconds\":30,\n    \"checkSeconds\":2,\n    \"waitForStates\":[\"Finish\"],\n    \"createWorkflowRequest\":{\n    \"externalId\": \"{{$guid}}\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"businessKey\": \"123822824s34\",\n    \"NextActivation\": \"2025-09-20T12:52:00.000Z\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/createAndWait",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "createAndWait"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "workflow create and wait",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \n    \"waitSeconds\":30,\n    \"checkSeconds\":2,\n    \"waitForStates\":[\"Finish\"],\n    \"createWorkflowRequest\":{\n    \"externalId\": \"{{$guid}}\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"businessKey\": \"123822824s34\",\n    \"NextActivation\": \"2025-09-20T12:52:00.000Z\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/createAndWait",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "createAndWait"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 17 Jan 2026 13:42:01 GMT"
+            },
+            {
+              "key": "Content-Length",
+              "value": "428"
+            }
+          ],
+          "cookie": [
+            {
+              "expires": "Invalid Date",
+              "domain": "",
+              "path": ""
+            }
+          ],
+          "body": "{\n    \"id\": 15,\n    \"status\": \"FINISHED\",\n    \"executionCount\": 0,\n    \"retryCount\": 0,\n    \"created\": \"2026-01-17T13:41:55.145Z\",\n    \"modified\": \"2026-01-17T13:42:00.111Z\",\n    \"nextActivation\": \"2025-09-20T12:52:00Z\",\n    \"started\": \"2026-01-17T13:41:57.162Z\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"externalId\": \"20c001f8-63a0-416c-8d2f-fe169e41e008\",\n    \"businessKey\": \"123822824s34\",\n    \"state\": \"Finish\",\n    \"stateVars\": {\n        \"createdBy\": \"admin\",\n        \"ip\": \"127.0.71.100\\n\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "workflow update State And Wait",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \n    \"waitSeconds\":30,\n    \"checkSeconds\":2,\n    \"waitForStates\":[\"Finish\"],\n    \"fromStates\":[\"Finish\"],\n    \"updateWorkflowStateRequest\":{\n    \"state\": \"StateGetIpData\"\n  },\n  \"updateStateVarRequest\":{\n    \"key\":\"name\",\n    \"value\":\"test\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/workflows/20c001f8-63a0-416c-8d2f-fe169e41e008/stateAndWait",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "workflows",
+            "20c001f8-63a0-416c-8d2f-fe169e41e008",
+            "stateAndWait"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "workflow update State And Wait",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "b5f0e8c4-daa6-465c-bded-50ca22b798b2",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \n    \"waitSeconds\":30,\n    \"checkSeconds\":2,\n    \"waitForStates\":[\"Finish\"],\n    \"fromStates\":[\"Finish\"],\n    \"updateWorkflowStateRequest\":{\n    \"state\": \"StateGetIpData\"\n  },\n  \"updateStateVarRequest\":{\n    \"key\":\"name\",\n    \"value\":\"test\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/workflows/20c001f8-63a0-416c-8d2f-fe169e41e008/stateAndWait",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "workflows",
+                "20c001f8-63a0-416c-8d2f-fe169e41e008",
+                "stateAndWait"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Date",
+              "value": "Sat, 17 Jan 2026 13:43:41 GMT"
+            },
+            {
+              "key": "Content-Length",
+              "value": "446"
+            }
+          ],
+          "cookie": [
+            {
+              "expires": "Invalid Date",
+              "domain": "",
+              "path": ""
+            }
+          ],
+          "body": "{\n    \"id\": 15,\n    \"status\": \"FINISHED\",\n    \"executionCount\": 0,\n    \"retryCount\": 0,\n    \"created\": \"2026-01-17T13:41:55.145Z\",\n    \"modified\": \"2026-01-17T13:43:39.212Z\",\n    \"nextActivation\": \"2026-01-17T13:43:37.275Z\",\n    \"started\": \"2026-01-17T13:41:57.162Z\",\n    \"executorGroup\": \"default\",\n    \"workflowType\": \"GetIpWorkflow\",\n    \"externalId\": \"20c001f8-63a0-416c-8d2f-fe169e41e008\",\n    \"businessKey\": \"123822824s34\",\n    \"state\": \"Finish\",\n    \"stateVars\": {\n        \"createdBy\": \"admin\",\n        \"ip\": \"127.0.71.100\\n\",\n        \"name\": \"test\"\n    }\n}"
+        }
+      ]
+    }
+  ]
+}

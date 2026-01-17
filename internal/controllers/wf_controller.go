@@ -48,7 +48,7 @@ func (c *WorkflowsController) handleGetWorkflowById(w http.ResponseWriter, r *ht
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "id is required", http.StatusBadRequest)
+		http.Error(w, "id is an integer", http.StatusBadRequest)
 		return
 	}
 
@@ -63,6 +63,28 @@ func (c *WorkflowsController) handleGetWorkflowById(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(apiResult)
 
+}
+
+func (c *WorkflowsController) handleGetWorkflowByExternalId(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	externalId := r.PathValue("externalId")
+	if externalId == "" {
+		http.Error(w, "externalId is required", http.StatusBadRequest)
+		return
+	}
+
+	result, err := c.WorkflowRepo.FindByExternalId(externalId)
+	if err != nil || result == nil {
+		http.Error(w, "workflow not found", http.StatusNotFound)
+		return
+	}
+	apiResult := mapWorkflowToApiWorkflow(result, result.ID)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(apiResult)
 }
 
 func (c *WorkflowsController) handleCreateWorkflow(w http.ResponseWriter, r *http.Request) {
@@ -574,6 +596,51 @@ func parseInt64(s string) int64 {
 	v, _ := strconv.ParseInt(s, 10, 64)
 	return v
 }
+
+// handleListWorkflowDefinitions returns a list of all workflow definitions
+func (c *WorkflowsController) handleListWorkflowDefinitions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	defs, err := c.WorkflowManager.ListWorkflowDefinitions()
+	if err != nil {
+		slog.Error("Failed to list workflow definitions", "error", err)
+		http.Error(w, "Failed to load definitions", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(defs)
+}
+
+// handleGetWorkflowDefinitionByName returns a specific workflow definition by name
+func (c *WorkflowsController) handleGetWorkflowDefinitionByName(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	name := r.PathValue("name")
+	if name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+
+	def, err := c.WorkflowManager.GetWorkflowDefinitionByName(name)
+	if err != nil {
+		slog.Error("Failed to get workflow definition", "name", name, "error", err)
+		http.Error(w, "Definition not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(def)
+}
+
 func contains(arr []string, val string) bool {
 	for _, item := range arr {
 		if item == val {

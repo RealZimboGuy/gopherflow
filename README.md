@@ -53,6 +53,28 @@ Access the web console at http://localhost:8080/
 <img src="screenshots/definition.png" alt="GopherFlow" style="max-width:300px;">
 </p>
 
+## REST API
+
+GopherFlow provides a REST API for programmatic interaction with workflows. A Postman collection is available in the `postman` directory to help you get started:
+
+- **Collection File**: in the `postman/` directory
+- **API Key Authentication**: All endpoints use an `X-API-Key` header for authentication, check users tab in the web ui for the api key
+
+### Available Endpoints:
+
+1. **Get Workflow Definitions** - `GET /api/definitions`
+2. **Create Workflow** - `POST /api/workflows`
+3. **Get Workflow Details** - `GET /api/workflows/{id}`
+4. **Get Workflow by External ID** - `GET /api/workflowByExternalId/{externalId}`
+5. **Search Workflows** - `POST /api/workflows/search`
+6. **Create and Wait** - `POST /api/createAndWait` - Create a workflow and wait for it to reach specific states
+7. **Update State and Wait** - `POST /api/workflows/{externalId}/stateAndWait` - Update a workflow's state and wait for it to reach specific states
+
+To use the Postman collection:
+1. Import the collection into Postman
+2. Configure your environment variables (if needed)
+3. Use the pre-configured requests to interact with your GopherFlow instance
+
 
 ## Building your own Workflow and running it
 
