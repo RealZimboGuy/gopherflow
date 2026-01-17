@@ -15,19 +15,19 @@ import (
 
 // State constants for parent workflow
 const (
-	ParentInit                    = "ParentInit"
-	ParentSpawnChildren           = "ParentSpawnChildren"
-	ParentWaitForChildren         = "ParentWaitForChildren"
-	ParentProcessChildrenResults  = "ParentProcessChildrenResults"
-	ParentFinish                  = "ParentFinish"
+	ParentInit                   = "ParentInit"
+	ParentSpawnChildren          = "ParentSpawnChildren"
+	ParentWaitForChildren        = "ParentWaitForChildren"
+	ParentProcessChildrenResults = "ParentProcessChildrenResults"
+	ParentFinish                 = "ParentFinish"
 )
 
 // State constants for child workflow
 const (
-	ChildInit                     = "ChildInit"
-	ChildProcessing               = "ChildProcessing"
-	ChildWakeParent               = "ChildWakeParent"
-	ChildFinish                   = "ChildFinish"
+	ChildInit       = "ChildInit"
+	ChildProcessing = "ChildProcessing"
+	ChildWakeParent = "ChildWakeParent"
+	ChildFinish     = "ChildFinish"
 )
 
 // ParentWorkflow represents a workflow that spawns child workflows
@@ -40,7 +40,7 @@ type ParentWorkflow struct {
 // ChildWorkflow represents a child workflow
 type ChildWorkflow struct {
 	core.BaseWorkflow
-	repo       *TestRepository
+	repo *TestRepository
 }
 
 // TestRepository is a mock repository for testing purposes
@@ -116,11 +116,11 @@ func (w *ParentWorkflow) GetChildWorkflows(ctx context.Context) ([]domain.Workfl
 	// In a real implementation, this would call the repository
 	// For testing, we'll return a mock response
 	slog.InfoContext(ctx, "Getting child workflows")
-	
+
 	if w.repo != nil {
 		w.repo.ChildCreated = true
 	}
-	
+
 	// Return mock child workflow for testing
 	return []domain.Workflow{
 		{
@@ -137,7 +137,7 @@ func (w *ParentWorkflow) GetChildWorkflows(ctx context.Context) ([]domain.Workfl
 // ParentInit initializes the parent workflow
 func (w *ParentWorkflow) ParentInit(ctx context.Context) (*models.NextState, error) {
 	slog.InfoContext(ctx, "Initializing parent workflow")
-	
+
 	return &models.NextState{
 		Name:      ParentSpawnChildren,
 		ActionLog: "Parent workflow initialized",
@@ -147,26 +147,24 @@ func (w *ParentWorkflow) ParentInit(ctx context.Context) (*models.NextState, err
 // ParentSpawnChildren spawns child workflows
 func (w *ParentWorkflow) ParentSpawnChildren(ctx context.Context) (*models.NextState, error) {
 	slog.InfoContext(ctx, "Spawning child workflows")
-	
+
 	// Create child workflow requests
 	childRequests := []models.ChildWorkflowRequest{
 		gopherflow.CreateChildWorkflowRequest(
 			"ChildWorkflow",
 			"child-1",
-			ChildInit,
 			map[string]string{"input": "value1"},
 		),
 		gopherflow.CreateChildWorkflowRequest(
 			"ChildWorkflow",
 			"child-2",
-			ChildInit,
 			map[string]string{"input": "value2"},
 		),
 	}
-	
+
 	w.numCreated = len(childRequests)
 	w.StateVariables["children_count"] = fmt.Sprintf("%d", w.numCreated)
-	
+
 	return &models.NextState{
 		Name:           ParentWaitForChildren,
 		ActionLog:      fmt.Sprintf("Spawned %d child workflows", w.numCreated),
@@ -177,34 +175,34 @@ func (w *ParentWorkflow) ParentSpawnChildren(ctx context.Context) (*models.NextS
 // ParentWaitForChildren waits for child workflows to complete
 func (w *ParentWorkflow) ParentWaitForChildren(ctx context.Context) (*models.NextState, error) {
 	slog.InfoContext(ctx, "Waiting for child workflows to complete")
-	
+
 	// Check if all children are done
 	// In a real implementation, this would check the status of children
 	children, err := w.GetChildWorkflows(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get child workflows: %w", err)
 	}
-	
+
 	completedCount := 0
 	for _, child := range children {
 		if child.Status == "FINISHED" {
 			completedCount++
 		}
 	}
-	
+
 	// If not all children are complete, wait more
 	if completedCount < w.numCreated {
-		slog.InfoContext(ctx, "Not all children complete, waiting", 
-			"completed", completedCount, 
+		slog.InfoContext(ctx, "Not all children complete, waiting",
+			"completed", completedCount,
 			"total", w.numCreated)
-		
+
 		return &models.NextState{
 			Name:                ParentWaitForChildren,
 			ActionLog:           fmt.Sprintf("Waiting for children: %d/%d complete", completedCount, w.numCreated),
 			NextExecutionOffset: "30 seconds",
 		}, nil
 	}
-	
+
 	return &models.NextState{
 		Name:      ParentProcessChildrenResults,
 		ActionLog: "All child workflows complete",
@@ -214,12 +212,12 @@ func (w *ParentWorkflow) ParentWaitForChildren(ctx context.Context) (*models.Nex
 // ParentProcessChildrenResults processes results from child workflows
 func (w *ParentWorkflow) ParentProcessChildrenResults(ctx context.Context) (*models.NextState, error) {
 	slog.InfoContext(ctx, "Processing child workflow results")
-	
+
 	children, err := w.GetChildWorkflows(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get child workflows: %w", err)
 	}
-	
+
 	// Process results from children
 	results := make(map[string]string)
 	for i, child := range children {
@@ -232,18 +230,18 @@ func (w *ParentWorkflow) ParentProcessChildrenResults(ctx context.Context) (*mod
 				slog.WarnContext(ctx, "Failed to parse child results", "error", err)
 				continue
 			}
-			
+
 			if childResults != nil {
 				results[fmt.Sprintf("child_%d_result", i+1)] = childResults["result"]
 			}
 		}
 	}
-	
+
 	// Store aggregated results
 	for k, v := range results {
 		w.StateVariables[k] = v
 	}
-	
+
 	return &models.NextState{
 		Name:      ParentFinish,
 		ActionLog: "Processed all child workflow results",
@@ -273,9 +271,9 @@ func (w *ChildWorkflow) Description() string {
 
 func (w *ChildWorkflow) StateTransitions() map[string][]string {
 	return map[string][]string{
-		ChildInit:        {ChildProcessing},
-		ChildProcessing:  {ChildWakeParent},
-		ChildWakeParent:  {ChildFinish},
+		ChildInit:       {ChildProcessing},
+		ChildProcessing: {ChildWakeParent},
+		ChildWakeParent: {ChildFinish},
 	}
 }
 
@@ -299,11 +297,11 @@ func (w *ChildWorkflow) GetRetryConfig() models.RetryConfig {
 // WakeParent implements the ParentChildCapable interface
 func (w *ChildWorkflow) WakeParent(ctx context.Context) error {
 	slog.InfoContext(ctx, "Waking parent workflow")
-	
+
 	if w.repo != nil {
 		w.repo.ParentWoken = true
 	}
-	
+
 	// In a real implementation, this would call the repository to wake the parent
 	return nil
 }
@@ -311,10 +309,10 @@ func (w *ChildWorkflow) WakeParent(ctx context.Context) error {
 // ChildInit initializes the child workflow
 func (w *ChildWorkflow) ChildInit(ctx context.Context) (*models.NextState, error) {
 	slog.InfoContext(ctx, "Initializing child workflow")
-	
+
 	input := w.StateVariables["input"]
 	slog.InfoContext(ctx, "Child workflow received input", "input", input)
-	
+
 	return &models.NextState{
 		Name:      ChildProcessing,
 		ActionLog: "Child workflow initialized",
@@ -324,10 +322,10 @@ func (w *ChildWorkflow) ChildInit(ctx context.Context) (*models.NextState, error
 // ChildProcessing performs the child workflow's task
 func (w *ChildWorkflow) ChildProcessing(ctx context.Context) (*models.NextState, error) {
 	slog.InfoContext(ctx, "Child workflow processing")
-	
+
 	// Store the result
 	w.StateVariables["result"] = "success"
-	
+
 	return &models.NextState{
 		Name:      ChildWakeParent,
 		ActionLog: "Child workflow processed data",
@@ -337,13 +335,13 @@ func (w *ChildWorkflow) ChildProcessing(ctx context.Context) (*models.NextState,
 // ChildWakeParent wakes the parent workflow
 func (w *ChildWorkflow) ChildWakeParent(ctx context.Context) (*models.NextState, error) {
 	slog.InfoContext(ctx, "Child workflow waking parent")
-	
+
 	// Wake the parent
 	err := w.WakeParent(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to wake parent: %w", err)
 	}
-	
+
 	return &models.NextState{
 		Name:      ChildFinish,
 		ActionLog: "Parent workflow awakened",

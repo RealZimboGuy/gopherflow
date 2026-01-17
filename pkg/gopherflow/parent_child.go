@@ -11,13 +11,11 @@ import (
 func CreateChildWorkflowRequest(
 	workflowType string,
 	businessKey string,
-	initialState string,
 	stateVars map[string]string,
 ) models.ChildWorkflowRequest {
 	return models.ChildWorkflowRequest{
 		WorkflowType:   workflowType,
 		BusinessKey:    businessKey,
-		InitialState:   initialState,
 		StateVariables: stateVars,
 	}
 }
@@ -29,11 +27,11 @@ func ParseChildWorkflowResults(stateVars map[string]string, key string) (map[str
 	if !ok {
 		return nil, nil // No results found, return empty map
 	}
-	
+
 	var results map[string]string
 	if err := json.Unmarshal([]byte(data), &results); err != nil {
 		return nil, err
 	}
-	
+
 	return results, nil
 }

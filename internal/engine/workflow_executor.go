@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -46,6 +47,11 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 
 	//the database determines where we are and start at
 	currentState := w.GetWorkflowData().State
+
+	//if no current state then set to the initial state
+	if currentState == "" {
+		currentState = w.InitialState()
+	}
 
 	//if we are on the starting state then update the starting time
 	if currentState == w.InitialState() {
@@ -185,16 +191,29 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 					}
 				}
 
-				// Create child workflow
-				child, err := r.CreateChildWorkflow(
-					w.GetWorkflowData().ID,
-					childReq.WorkflowType,
-					childReq.InitialState,
-					childReq.BusinessKey,
-					childReq.ExternalId,
-					config.GetSystemSettingString(config.ENGINE_EXECUTOR_GROUP),
-					stateVarsJSON,
-				)
+				// Create child workflow directly using Save
+				childWf := &domain.Workflow{
+					Status:           "NEW",
+					ExecutionCount:   0,
+					RetryCount:       0,
+					Created:          time.Now(),
+					Modified:         time.Now(),
+					NextActivation:   sql.NullTime{Time: time.Now(), Valid: true},
+					ExecutorGroup:    config.GetSystemSettingString(config.ENGINE_EXECUTOR_GROUP),
+					ExternalID:       childReq.ExternalId,
+					WorkflowType:     childReq.WorkflowType,
+					BusinessKey:      childReq.BusinessKey,
+					StateVars:        sql.NullString{String: stateVarsJSON, Valid: stateVarsJSON != ""},
+					ParentWorkflowID: sql.NullInt64{Int64: w.GetWorkflowData().ID, Valid: true},
+				}
+
+				childID, err := r.Save(childWf)
+				if err != nil {
+					slog.ErrorContext(ctx, "Error creating child workflow", "error", err)
+					continue
+				}
+
+				child, err := r.FindByID(childID)
 
 				if err != nil {
 					slog.ErrorContext(ctx, "Error creating child workflow", "error", err)

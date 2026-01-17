@@ -116,34 +116,6 @@ func (r *WorkflowRepository) GetChildrenByParentID(parentID int64, onlyActive bo
 	return &workflows, nil
 }
 
-// CreateChildWorkflow creates a new child workflow with the parent ID set
-func (r *WorkflowRepository) CreateChildWorkflow(parentID int64, workflowType string, initialState string, businessKey string, externalId string, executorGroup string, stateVars string) (*domain.Workflow, error) {
-	// Create a new workflow
-	wf := &domain.Workflow{
-		Status:           "NEW",
-		ExecutionCount:   0,
-		RetryCount:       0,
-		Created:          r.clock.Now(),
-		Modified:         r.clock.Now(),
-		NextActivation:   sql.NullTime{Time: r.clock.Now(), Valid: true},
-		ExecutorGroup:    executorGroup,
-		ExternalID:       externalId,
-		WorkflowType:     workflowType,
-		BusinessKey:      businessKey,
-		State:            initialState,
-		StateVars:        sql.NullString{String: stateVars, Valid: stateVars != ""},
-		ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
-	}
-
-	// Save the workflow
-	id, err := r.Save(wf)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create child workflow: %w", err)
-	}
-
-	// Return the created workflow
-	return r.FindByID(id)
-}
 
 func (r *WorkflowRepository) FindByID(id int64) (*domain.Workflow, error) {
 	query := `

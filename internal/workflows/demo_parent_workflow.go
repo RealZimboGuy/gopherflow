@@ -104,14 +104,12 @@ func (w *DemoParentWorkflow) ParentSpawnChildren(ctx context.Context) (*models.N
 		gopherflow.CreateChildWorkflowRequest(
 			"DemoChildWorkflow", // Workflow type
 			fmt.Sprintf("child-1-of-%d", w.WorkflowState.ID), // Business key
-			"ChildInit",                         // Initial state - using string to avoid import cycle
-			map[string]string{"sleepTime": "3"}, // State variables - 3 second sleep
+			map[string]string{"sleepTime": "3"},              // State variables - 3 second sleep
 		),
 		gopherflow.CreateChildWorkflowRequest(
 			"DemoChildWorkflow", // Workflow type
 			fmt.Sprintf("child-2-of-%d", w.WorkflowState.ID), // Business key
-			"ChildInit",                          // Initial state - using string to avoid import cycle
-			map[string]string{"sleepTime": "15"}, // State variables - 5 second sleep
+			map[string]string{"sleepTime": "15"},             // State variables - 5 second sleep
 		),
 	}
 

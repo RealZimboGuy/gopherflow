@@ -55,16 +55,30 @@ func TestParentChildRepositoryMethods(t *testing.T) {
 				t.Fatalf("Failed to save parent workflow: %v", err)
 			}
 			
-			// Create a child workflow
-			childWf, err := wfRepo.CreateChildWorkflow(
-				parentID,
-				"ChildWorkflow",
-				"Init",
-				"child-1",
-				`{"input":"test-value"}`,
-				"default",
-				"",
-			)
+			// Create a child workflow directly using Save
+			childWf := &domain.Workflow{
+				Status:           "NEW",
+				ExecutionCount:   0,
+				RetryCount:       0,
+				Created:          clock.Now(),
+				Modified:         clock.Now(),
+				NextActivation:   sql.NullTime{Time: clock.Now(), Valid: true},
+				ExecutorGroup:    "default",
+				WorkflowType:     "ChildWorkflow",
+				BusinessKey:      "child-1",
+				State:            "Init",
+				ExternalID:       `{"input":"test-value"}`,
+				StateVars:        sql.NullString{String: "", Valid: false},
+				ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
+			}
+			
+			childID, err := wfRepo.Save(childWf)
+			if err != nil {
+				t.Fatalf("Failed to save child workflow: %v", err)
+			}
+			
+			// Get the saved child workflow
+			childWf, err = wfRepo.FindByID(childID)
 			
 			if err != nil {
 				t.Fatalf("Failed to create child workflow: %v", err)
@@ -122,15 +136,23 @@ func TestParentChildRepositoryMethods(t *testing.T) {
 			// Create multiple child workflows
 			childCount := 3
 			for i := 1; i <= childCount; i++ {
-				_, err := wfRepo.CreateChildWorkflow(
-					parentID,
-					"ChildWorkflow",
-					"Init",
-					fmt.Sprintf("child-%d", i),
-					fmt.Sprintf(`{"index":%d}`, i),
-					"default",
-					"",
-				)
+				childWf := &domain.Workflow{
+					Status:           "NEW",
+					ExecutionCount:   0,
+					RetryCount:       0,
+					Created:          clock.Now(),
+					Modified:         clock.Now(),
+					NextActivation:   sql.NullTime{Time: clock.Now(), Valid: true},
+					ExecutorGroup:    "default",
+					WorkflowType:     "ChildWorkflow",
+					BusinessKey:      fmt.Sprintf("child-%d", i),
+					State:            "Init",
+					ExternalID:       fmt.Sprintf(`{"index":%d}`, i),
+					StateVars:        sql.NullString{String: "", Valid: false},
+					ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
+				}
+				
+				_, err := wfRepo.Save(childWf)
 				
 				if err != nil {
 					t.Fatalf("Failed to create child workflow %d: %v", i, err)
@@ -203,15 +225,23 @@ func TestParentChildRepositoryMethods(t *testing.T) {
 			}
 			
 			// Create a child workflow
-			_, err = wfRepo.CreateChildWorkflow(
-				parentID,
-				"ChildWorkflow",
-				"Init",
-				"child-wake-test",
-				`{"task":"wake-parent"}`,
-				"default",
-				"",
-			)
+			childWf := &domain.Workflow{
+				Status:           "NEW",
+				ExecutionCount:   0,
+				RetryCount:       0,
+				Created:          clock.Now(),
+				Modified:         clock.Now(),
+				NextActivation:   sql.NullTime{Time: clock.Now(), Valid: true},
+				ExecutorGroup:    "default",
+				WorkflowType:     "ChildWorkflow",
+				BusinessKey:      "child-wake-test",
+				State:            "Init",
+				ExternalID:       `{"task":"wake-parent"}`,
+				StateVars:        sql.NullString{String: "", Valid: false},
+				ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
+			}
+			
+			_, err = wfRepo.Save(childWf)
 			
 			if err != nil {
 				t.Fatalf("Failed to create child workflow: %v", err)
