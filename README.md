@@ -76,6 +76,16 @@ To use the Postman collection:
 3. Use the pre-configured requests to interact with your GopherFlow instance
 
 
+### Performance
+* Tested to a few thousand simple workflows per minute with the concurrent workers increased, see system settings (ENGINE_CHECK_DB_INTERVAL, ENGINE_BATCH_SIZE and ENGINE_EXECUTOR_SIZE )
+* Something to note, there are no official records of this to put on the repo.... why:
+    * at a certain point if you need raw throughput, you dont need a workflow engine and will hand tool the code.
+    * if you are chasing performance to that level, the convenience of a framework like GopherFlow is not worth it.
+    * if you have complicated Directed Acyclic Graphs (DAGs) you will most likely need a workflow engine, in that case your executions per minute is more limited by external factors like APIs you are calling, database performance, etc.
+    * having a workflow engine gives a single place for workflows to live and makes the trivial things like persistence, retry and observability easier.
+* these are mostly the rants of the developer :) take it with some salt.
+
+
 ## Building your own Workflow and running it
 
 refer to the example application:  https://github.com/RealZimboGuy/gopherflow-examples
