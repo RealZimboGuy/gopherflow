@@ -62,6 +62,8 @@ func TestParentChildRepositoryMethods(t *testing.T) {
 				"Init",
 				"child-1",
 				`{"input":"test-value"}`,
+				"default",
+				"",
 			)
 			
 			if err != nil {
@@ -126,6 +128,8 @@ func TestParentChildRepositoryMethods(t *testing.T) {
 					"Init",
 					fmt.Sprintf("child-%d", i),
 					fmt.Sprintf(`{"index":%d}`, i),
+					"default",
+					"",
 				)
 				
 				if err != nil {
@@ -205,6 +209,8 @@ func TestParentChildRepositoryMethods(t *testing.T) {
 				"Init",
 				"child-wake-test",
 				`{"task":"wake-parent"}`,
+				"default",
+				"",
 			)
 			
 			if err != nil {

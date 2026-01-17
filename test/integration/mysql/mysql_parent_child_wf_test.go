@@ -18,7 +18,7 @@ func TestParentChildWorkflows(t *testing.T) {
 	runTestWithSetup(t, func(t *testing.T, port int) {
 		// Create a fake clock for testing
 		clock := integration.NewFakeClock(time.Now())
-		
+
 		// Create database connection directly for testing
 		dsn := os.Getenv("GFLOW_DATABASE_URL")
 		db, err := sql.Open("mysql", dsn[8:]) // Remove mysql:// prefix
@@ -26,10 +26,10 @@ func TestParentChildWorkflows(t *testing.T) {
 			t.Fatalf("Failed to open database: %v", err)
 		}
 		defer db.Close()
-		
+
 		// Create repositories
 		wfRepo := repository.NewWorkflowRepository(db, clock)
-		
+
 		// Test CreateChildWorkflow
 		t.Run("CreateChildWorkflow", func(t *testing.T) {
 			// Create a parent workflow
@@ -46,13 +46,13 @@ func TestParentChildWorkflows(t *testing.T) {
 				State:          "Init",
 				StateVars:      sql.NullString{String: "{}", Valid: true},
 			}
-			
+
 			// Save the parent workflow
 			parentID, err := wfRepo.Save(parentWf)
 			if err != nil {
 				t.Fatalf("Failed to save parent workflow: %v", err)
 			}
-			
+
 			// Create a child workflow
 			childWf, err := wfRepo.CreateChildWorkflow(
 				parentID,
@@ -60,38 +60,39 @@ func TestParentChildWorkflows(t *testing.T) {
 				"Init",
 				"child-1",
 				`{"input":"test-value"}`,
-			)
-			
+				"default",
+				"")
+
 			if err != nil {
 				t.Fatalf("Failed to create child workflow: %v", err)
 			}
-			
+
 			// Verify the child workflow
 			if childWf == nil {
 				t.Fatal("Child workflow is nil")
 			}
-			
+
 			if childWf.ParentWorkflowID.Valid == false {
 				t.Error("Expected ParentWorkflowID to be valid")
 			}
-			
+
 			if childWf.ParentWorkflowID.Int64 != parentID {
 				t.Errorf("Expected ParentWorkflowID to be %d, got %d", parentID, childWf.ParentWorkflowID.Int64)
 			}
-			
+
 			if childWf.WorkflowType != "ChildWorkflow" {
 				t.Errorf("Expected WorkflowType to be ChildWorkflow, got %s", childWf.WorkflowType)
 			}
-			
+
 			if childWf.State != "Init" {
 				t.Errorf("Expected State to be Init, got %s", childWf.State)
 			}
-			
+
 			if childWf.BusinessKey != "child-1" {
 				t.Errorf("Expected BusinessKey to be child-1, got %s", childWf.BusinessKey)
 			}
 		})
-		
+
 		// Test GetChildrenByParentID
 		t.Run("GetChildrenByParentID", func(t *testing.T) {
 			// Create a parent workflow
@@ -108,13 +109,13 @@ func TestParentChildWorkflows(t *testing.T) {
 				State:          "Init",
 				StateVars:      sql.NullString{String: "{}", Valid: true},
 			}
-			
+
 			// Save the parent workflow
 			parentID, err := wfRepo.Save(parentWf)
 			if err != nil {
 				t.Fatalf("Failed to save parent workflow: %v", err)
 			}
-			
+
 			// Create multiple child workflows
 			childCount := 3
 			for i := 1; i <= childCount; i++ {
@@ -124,54 +125,55 @@ func TestParentChildWorkflows(t *testing.T) {
 					"Init",
 					fmt.Sprintf("child-%d", i),
 					fmt.Sprintf(`{"index":%d}`, i),
-				)
-				
+					"default",
+					"")
+
 				if err != nil {
 					t.Fatalf("Failed to create child workflow %d: %v", i, err)
 				}
 			}
-			
+
 			// Get all child workflows
 			children, err := wfRepo.GetChildrenByParentID(parentID, false)
 			if err != nil {
 				t.Fatalf("Failed to get child workflows: %v", err)
 			}
-			
+
 			// Verify we got the expected number of children
 			if len(*children) != childCount {
 				t.Errorf("Expected %d child workflows, got %d", childCount, len(*children))
 			}
-			
+
 			// Get only active children (all should be active)
 			activeChildren, err := wfRepo.GetChildrenByParentID(parentID, true)
 			if err != nil {
 				t.Fatalf("Failed to get active child workflows: %v", err)
 			}
-			
+
 			// Verify all children are active
 			if len(*activeChildren) != childCount {
 				t.Errorf("Expected %d active child workflows, got %d", childCount, len(*activeChildren))
 			}
-			
+
 			// Set one child to FINISHED
 			firstChild := (*children)[0]
 			err = wfRepo.UpdateWorkflowStatus(firstChild.ID, "FINISHED")
 			if err != nil {
 				t.Fatalf("Failed to update child workflow status: %v", err)
 			}
-			
+
 			// Get active children again
 			activeChildren, err = wfRepo.GetChildrenByParentID(parentID, true)
 			if err != nil {
 				t.Fatalf("Failed to get active child workflows: %v", err)
 			}
-			
+
 			// Verify we have one fewer active child
 			if len(*activeChildren) != childCount-1 {
 				t.Errorf("Expected %d active child workflows, got %d", childCount-1, len(*activeChildren))
 			}
 		})
-		
+
 		// Test WakeParentWorkflow
 		t.Run("WakeParentWorkflow", func(t *testing.T) {
 			// Create a parent workflow with next_activation in the future
@@ -189,13 +191,13 @@ func TestParentChildWorkflows(t *testing.T) {
 				State:          "WaitForChildren",
 				StateVars:      sql.NullString{String: "{}", Valid: true},
 			}
-			
+
 			// Save the parent workflow
 			parentID, err := wfRepo.Save(parentWf)
 			if err != nil {
 				t.Fatalf("Failed to save parent workflow: %v", err)
 			}
-			
+
 			// Create a child workflow
 			_, err = wfRepo.CreateChildWorkflow(
 				parentID,
@@ -203,39 +205,40 @@ func TestParentChildWorkflows(t *testing.T) {
 				"Init",
 				"child-wake-test",
 				`{"task":"wake-parent"}`,
-			)
-			
+				"default",
+				"")
+
 			if err != nil {
 				t.Fatalf("Failed to create child workflow: %v", err)
 			}
-			
+
 			// Verify parent's next_activation is in the future
 			parentBefore, err := wfRepo.FindByID(parentID)
 			if err != nil {
 				t.Fatalf("Failed to get parent workflow: %v", err)
 			}
-			
+
 			if !parentBefore.NextActivation.Valid || !parentBefore.NextActivation.Time.After(clock.Now()) {
 				t.Error("Expected parent workflow next_activation to be in the future")
 			}
-			
+
 			// Wake the parent
 			err = wfRepo.WakeParentWorkflow(parentID)
 			if err != nil {
 				t.Fatalf("Failed to wake parent workflow: %v", err)
 			}
-			
+
 			// Get the parent workflow after waking
 			parentAfter, err := wfRepo.FindByID(parentID)
 			if err != nil {
 				t.Fatalf("Failed to get parent workflow after wake: %v", err)
 			}
-			
+
 			// Verify next_activation is updated to now
 			if !parentAfter.NextActivation.Valid {
 				t.Error("Expected parent workflow next_activation to be valid")
 			}
-			
+
 			// Check that next_activation is close to now (within a second)
 			timeDiff := parentAfter.NextActivation.Time.Sub(clock.Now())
 			if timeDiff < -1*time.Second || timeDiff > 1*time.Second {

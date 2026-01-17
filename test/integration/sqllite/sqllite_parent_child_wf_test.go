@@ -86,6 +86,8 @@ func TestParentChildWorkflowRepository(t *testing.T) {
 				"ChildInit",
 				"child-1",
 				`{"input":"test-value"}`,
+				"default",
+				"",
 			)
 			
 			if err != nil {
@@ -145,6 +147,8 @@ func TestParentChildWorkflowRepository(t *testing.T) {
 					"ChildInit",
 					fmt.Sprintf("child-%d", i),
 					fmt.Sprintf(`{"input":"value%d"}`, i),
+					"default",
+					"",
 				)
 				
 				if err != nil {
@@ -218,52 +222,54 @@ func TestParentChildWorkflowRepository(t *testing.T) {
 			}
 			
 			// Create a child workflow but don't store the result since we don't need it
- 		_, err = wfRepo.CreateChildWorkflow(
- 			parentID,
- 			"ChildWorkflow",
- 			"ChildInit",
- 			"child-wake-test",
- 			`{"input":"wake-parent"}`,
- 		)
+			_, err = wfRepo.CreateChildWorkflow(
+				parentID,
+				"ChildWorkflow",
+				"ChildInit",
+				"child-wake-test",
+				`{"input":"wake-parent"}`,
+				"default",
+				"",
+			)
 		
- 		if err != nil {
- 			t.Fatalf("Failed to create child workflow: %v", err)
- 		}
+			if err != nil {
+				t.Fatalf("Failed to create child workflow: %v", err)
+			}
 		
- 		// Get the parent workflow to check its current next_activation
- 		parentBefore, err := wfRepo.FindByID(parentID)
- 		if err != nil {
- 			t.Fatalf("Failed to get parent workflow: %v", err)
- 		}
+			// Get the parent workflow to check its current next_activation
+			parentBefore, err := wfRepo.FindByID(parentID)
+			if err != nil {
+				t.Fatalf("Failed to get parent workflow: %v", err)
+			}
 		
- 		// Verify next_activation is set to future
- 		if !parentBefore.NextActivation.Valid || !parentBefore.NextActivation.Time.After(clock.Now()) {
- 			t.Errorf("Expected parent workflow next_activation to be in the future")
- 		}
+			// Verify next_activation is set to future
+			if !parentBefore.NextActivation.Valid || !parentBefore.NextActivation.Time.After(clock.Now()) {
+				t.Errorf("Expected parent workflow next_activation to be in the future")
+			}
 		
- 		// Wake the parent
- 		err = wfRepo.WakeParentWorkflow(parentID)
- 		if err != nil {
- 			t.Fatalf("Failed to wake parent workflow: %v", err)
- 		}
+			// Wake the parent
+			err = wfRepo.WakeParentWorkflow(parentID)
+			if err != nil {
+				t.Fatalf("Failed to wake parent workflow: %v", err)
+			}
 		
- 		// Get the parent workflow again
- 		parentAfter, err := wfRepo.FindByID(parentID)
- 		if err != nil {
- 			t.Fatalf("Failed to get parent workflow after wake: %v", err)
- 		}
+			// Get the parent workflow again
+			parentAfter, err := wfRepo.FindByID(parentID)
+			if err != nil {
+				t.Fatalf("Failed to get parent workflow after wake: %v", err)
+			}
 		
- 		// Verify next_activation is updated to now
- 		if !parentAfter.NextActivation.Valid {
- 			t.Errorf("Expected parent workflow next_activation to be valid")
- 		}
+			// Verify next_activation is updated to now
+			if !parentAfter.NextActivation.Valid {
+				t.Errorf("Expected parent workflow next_activation to be valid")
+			}
 		
- 		// Should be very close to now (within a second)
- 		timeDiff := parentAfter.NextActivation.Time.Sub(clock.Now())
- 		if timeDiff < -1*time.Second || timeDiff > 1*time.Second {
- 			t.Errorf("Expected parent workflow next_activation to be close to now, got diff: %v", timeDiff)
- 		}
- 	})
+			// Should be very close to now (within a second)
+			timeDiff := parentAfter.NextActivation.Time.Sub(clock.Now())
+			if timeDiff < -1*time.Second || timeDiff > 1*time.Second {
+				t.Errorf("Expected parent workflow next_activation to be close to now, got diff: %v", timeDiff)
+			}
+		})
 	})
 }
 
