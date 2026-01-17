@@ -19,7 +19,7 @@ func TestStartupAppAndGetExecutor(t *testing.T) {
 	RunTestWithSetup(t, func(t *testing.T, port int) {
 
 		clock := integration.NewFakeClock(time.Now())
-		gopherflow.SetupLoggerWithClock(slog.LevelInfo, clock)
+		gopherflow.SetupLoggerWithClock(slog.LevelWarn, clock)
 		workflowRegistry := map[string]func() core.Workflow{
 			"DemoWorkflow": func() core.Workflow {
 				return &workflows.DemoWorkflow{

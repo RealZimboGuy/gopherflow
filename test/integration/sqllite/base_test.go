@@ -3,11 +3,12 @@ package sqllite
 import (
 	"context"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"strconv"
 	"sync/atomic"
 	"testing"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var portBase int32 = 9018 // starting port number (can be anything safe)
