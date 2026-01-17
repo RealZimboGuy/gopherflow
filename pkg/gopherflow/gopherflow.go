@@ -135,13 +135,18 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) Shutdown() {
-
 	//remove any global setups to clean up resources
 	//WorkflowRegistry = make(map[string]func() core.Workflow)
-	//a.DB.Close()
+	
+	// Close the DB connection
+	if a.DB != nil {
+		a.DB.Close()
+	}
 	slog.Info("DB connection closed")
-	//remove any global registered routes
+	
+	// Clear the default HTTP mux to reset routes
 	http.DefaultServeMux = new(http.ServeMux)
+	
 	slog.Info("Shutdown complete")
 }
 
@@ -217,6 +222,13 @@ func setupMysqlDatabase() *sql.DB {
 		slog.Error("DB connection failed", "error", err)
 		os.Exit(1)
 	}
+	
+	// Configure connection settings for better stability in tests
+	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(20)
+	db.SetConnMaxLifetime(1 * time.Hour)
+	db.SetConnMaxIdleTime(30 * time.Minute)
+	
 	return db
 }
 

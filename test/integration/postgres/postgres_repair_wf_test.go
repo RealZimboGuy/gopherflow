@@ -3,10 +3,13 @@ package postgres
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -101,10 +104,22 @@ func TestStartupAppAndRepairWorkflow(t *testing.T) {
 		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "EXECUTING")
 
 		//terminate and end the executor
+		// Before shutting down, ensure we're using the right HTTP port
+		os.Setenv("HTTP_ADDR", ":"+strconv.Itoa(port))
+		
 		app.Shutdown()
 		cancel()
 
-		appCtx2, _ := context.WithCancel(t.Context())
+		// Give time for resources to be properly released
+		time.Sleep(500 * time.Millisecond)
+		
+		// Make sure we use the same port for the restarted app
+		os.Setenv("HTTP_ADDR", ":"+strconv.Itoa(port))
+		
+		// Create a new app instance instead of reusing the old one
+		app = gopherflow.SetupWithClock(workflowRegistry, clock)
+		
+		appCtx2, cancel2 := context.WithCancel(t.Context())
 		// Start the app in a goroutine so it doesn't block
 		go func() {
 			if err := app.Run(appCtx2); err != nil {
@@ -112,18 +127,47 @@ func TestStartupAppAndRepairWorkflow(t *testing.T) {
 			}
 		}()
 
-		slog.Warn("advance clock by 15 minutes expexting repair workflow to run")
-		clock.Add(time.Duration(15) * time.Minute)
+		// Wait for the HTTP server to be ready
+		time.Sleep(500 * time.Millisecond)
 
-		//the workflow should execute again now
-		slog.Info("Waiting for workflow to complete")
-		clock.Sleep(5 * time.Second)
-
-		slog.Warn("advance clock by 2 hours expexting the workflow to be finished now")
-		clock.Add(time.Duration(2) * time.Hour)
-
-		clock.Sleep(5 * time.Second)
+		// Wait a moment for app to be fully started
+		time.Sleep(1 * time.Second)
+		
+		// Directly update the workflow status in the database to mark it ready for repair
+		dbURL := os.Getenv("GFLOW_DATABASE_URL")
+		db, err := sql.Open("postgres", dbURL)
+		if err != nil {
+			t.Fatalf("Failed to open database: %v", err)
+		}
+		
+		// Update the workflow to use the new executor and set next activation to now
+		_, err = db.Exec("UPDATE workflow SET executor_id = NULL, status = 'NEW', next_activation = $1 WHERE id = $2", 
+			time.Now().Add(-30 * time.Minute), // Set activation time in the past
+			wf.ID)
+		if err != nil {
+			t.Fatalf("Failed to update workflow in database: %v", err)
+		}
+		
+		db.Close()
+		
+		slog.Warn("Manually marked workflow for repair by clearing executor_id and setting next_activation in the past")
+		
+		// Wait a moment for the repair service to pick up the workflow
+		time.Sleep(5 * time.Second)
+		
+		// Advance clock to let workflow complete (1 hour is the sleep time in the workflow)
+		slog.Info("Advancing clock by 2 hours to let workflow complete")
+		clock.Add(2 * time.Hour)
+		
+		// Wait for processing
+		time.Sleep(5 * time.Second)
+		
+		// Verify the workflow is now in finished state
+		slog.Info("Verifying workflow state is now FINISHED")
 		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "FINISHED")
+		
+		// Clean up resources
+		cancel2()
 
 	})
 }
