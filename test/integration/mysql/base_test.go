@@ -25,7 +25,7 @@ func nextPort() int {
 	return int(atomic.AddInt32(&portBase, 1))
 }
 
-func runTestWithSetup(t *testing.T, testFunc func(t *testing.T, port int)) {
+func RunTestWithSetup(t *testing.T, testFunc func(t *testing.T, port int)) {
 	port := nextPort()
 	os.Setenv("HTTP_ADDR", ":"+strconv.Itoa(port))
 	container, _ := SetupMySQLTestInstance(t.Context())

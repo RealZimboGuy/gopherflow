@@ -23,7 +23,7 @@ import (
 )
 
 func TestStartupAppAndRepairWorkflow(t *testing.T) {
-	runTestWithSetup(t, func(t *testing.T, port int) {
+	RunTestWithSetup(t, func(t *testing.T, port int) {
 
 		appCtx, cancel := context.WithCancel(t.Context())
 

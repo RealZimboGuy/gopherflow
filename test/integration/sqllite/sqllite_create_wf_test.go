@@ -19,7 +19,7 @@ import (
 )
 
 func TestStartupAppAndCreateWorkflow(t *testing.T) {
-	runTestWithSetup(t, func(t *testing.T, port int) {
+	RunTestWithSetup(t, func(t *testing.T, port int) {
 
 		clock := integration.NewFakeClock(time.Now())
 		gopherflow.SetupLoggerWithClock(slog.LevelInfo, clock)

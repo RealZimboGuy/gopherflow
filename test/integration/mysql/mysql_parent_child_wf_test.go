@@ -15,7 +15,7 @@ import (
 
 // TestParentChildWorkflows tests the parent-child workflow functionality
 func TestParentChildWorkflows(t *testing.T) {
-	runTestWithSetup(t, func(t *testing.T, port int) {
+	RunTestWithSetup(t, func(t *testing.T, port int) {
 		// Create a fake clock for testing
 		clock := integration.NewFakeClock(time.Now())
 

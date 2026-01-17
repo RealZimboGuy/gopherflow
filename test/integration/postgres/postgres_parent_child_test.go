@@ -15,7 +15,7 @@ import (
 
 // TestParentChildRepositoryMethods tests the repository methods for parent-child workflow functionality
 func TestParentChildRepositoryMethods(t *testing.T) {
-	runTestWithSetup(t, func(t *testing.T, port int) {
+	RunTestWithSetup(t, func(t *testing.T, port int) {
 		// Create a fake clock for testing
 		clock := integration.NewFakeClock(time.Now())
 		

@@ -13,12 +13,12 @@ import (
 )
 
 func TestParentChildWorkflowRepository(t *testing.T) {
-	runTestWithSetup(t, func(t *testing.T, port int) {
+	RunTestWithSetup(t, func(t *testing.T, port int) {
 		// Initialize fake clock
 		clock := integration.NewFakeClock(time.Now())
 		
 		// Open database connection directly - we'll use the environment variables
-		// that have been set by runTestWithSetup to ensure the file path is correct
+		// that have been set by RunTestWithSetup to ensure the file path is correct
 		dbName := os.Getenv("GFLOW_DATABASE_SQLLITE_FILE_NAME")
 		db, err := sql.Open("sqlite3", dbName)
 		if err != nil {
