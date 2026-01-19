@@ -97,21 +97,21 @@ refer to the example application:  https://github.com/RealZimboGuy/gopherflow-ex
 a struct that extends the base 
 ```go
 type GetIpWorkflow struct {
-core.BaseWorkflow
+    core.BaseWorkflow
 }
 ```
 the workflow interface must be fully implemented
 
 ```go
 type Workflow interface {
-StateTransitions() map[string][]string // map of state name -> list of next state names
-InitialState() string // where to start
-Description() string
-Setup(wf *domain.Workflow)
-GetWorkflowData() *domain.Workflow
-GetStateVariables() map[string]string
-GetAllStates() []models.WorkflowState 
-GetRetryConfig() models.RetryConfig
+    StateTransitions() map[string][]string // map of state name -> list of next state names
+    InitialState() string // where to start
+    Description() string
+    Setup(wf *domain.Workflow)
+    GetWorkflowData() *domain.Workflow
+    GetStateVariables() map[string]string
+    GetAllStates() []models.WorkflowState 
+    GetRetryConfig() models.RetryConfig
 }
 
 ```
@@ -119,14 +119,14 @@ GetRetryConfig() models.RetryConfig
 
 ```go
 import (
-"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
-domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
-models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
+    "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
+    domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+    models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 
-	"io"
-	"log/slog"
-	"net/http"
-	"time"
+    "io"
+    "log/slog"
+    "net/http"
+    "time"
 )
 
 // Define a named string type
@@ -140,107 +140,105 @@ core.BaseWorkflow
 }
 
 func (m *GetIpWorkflow) Setup(wf *domain.Workflow) {
-m.BaseWorkflow.Setup(wf)
+    m.BaseWorkflow.Setup(wf)
 }
 func (m *GetIpWorkflow) GetWorkflowData() *domain.Workflow {
-return m.WorkflowState
+    return m.WorkflowState
 }
 func (m *GetIpWorkflow) GetStateVariables() map[string]string {
-return m.StateVariables
+    return m.StateVariables
 }
 func (m *GetIpWorkflow) InitialState() string {
-return StateStart
+    return StateStart
 }
 
 func (m *GetIpWorkflow) Description() string {
-return "This is a Demo Workflow showing how it can be used"
+    return "This is a Demo Workflow showing how it can be used"
 }
 
 func (m *GetIpWorkflow) GetRetryConfig() models.RetryConfig {
-return models.RetryConfig{
-MaxRetryCount:    10,
-RetryIntervalMin: time.Second * 10,
-RetryIntervalMax: time.Minute * 60,
-}
+    return models.RetryConfig{
+        MaxRetryCount:    10,
+        RetryIntervalMin: time.Second * 10,
+        RetryIntervalMax: time.Minute * 60,
+    }
 }
 
 func (m *GetIpWorkflow) StateTransitions() map[string][]string {
-return map[string][]string{
-StateStart:     []string{StateGetIpData}, // Init -> StateGetIpData
-StateGetIpData: []string{StateFinish},    // StateGetIpData -> finish
-}
+    return map[string][]string{
+        StateStart:     []string{StateGetIpData}, // Init -> StateGetIpData
+        StateGetIpData: []string{StateFinish},    // StateGetIpData -> finish
+    }
 }
 func (m *GetIpWorkflow) GetAllStates() []models.WorkflowState {
-states := []models.WorkflowState{
-{Name: StateStart, StateType: models.StateStart},
-{Name: StateGetIpData, StateType: models.StateNormal},
-{Name: StateFinish, StateType: models.StateEnd},
-}
-return states
+    states := []models.WorkflowState{
+        {Name: StateStart, StateType: models.StateStart},
+        {Name: StateGetIpData, StateType: models.StateNormal},
+        {Name: StateFinish, StateType: models.StateEnd},
+    }
+    return states
 }
 
 // Each method returns the next state
 func (m *GetIpWorkflow) Start(ctx context.Context) (*models.NextState, error) {
 
-//use the Context slog because there are workerids and other fields in the context that get written by the logger
-slog.InfoContext(ctx,"Starting workflow")
+    //use the Context slog because there are workerids and other fields in the context that get written by the logger
+    slog.InfoContext(ctx,"Starting workflow")
 
-	return &models.NextState{
-		Name:      StateGetIpData,
-		ActionLog: "using ifconfig.io to return the public IP address",
-	}, nil
+    return &models.NextState{
+        Name:      StateGetIpData,
+        ActionLog: "using ifconfig.io to return the public IP address",
+    }, nil
 }
 
 func (m *GetIpWorkflow) StateGetIpData(ctx context.Context) (*models.NextState, error) {
-resp, err := http.Get("http://ifconfig.io")
-if err != nil {
-return nil, err
-}
-defer resp.Body.Close()
+    resp, err := http.Get("http://ifconfig.io")
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
 
-	ipBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	ip := string(ipBytes)
-	m.StateVariables[VAR_IP] = ip
+    ipBytes, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return nil, err
+    }
+    ip := string(ipBytes)
+    m.StateVariables[VAR_IP] = ip
 
-	return &models.NextState{
-		Name: StateFinish,
-	}, nil
+    return &models.NextState{
+        Name: StateFinish,
+    }, nil
 }
 ```
 
 ### Main function
 ```go
-   import (
+import (
     "context"
     "log/slog"
     
     "github.com/RealZimboGuy/gopherflow/internal/workflows"
     "github.com/RealZimboGuy/gopherflow/pkg/gopherflow"
-    "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
-    )
+)
     
-    func main() {
-    
+func main() {
     //you may do your own logger setup here or use this default one with slog
     ctx := context.Background()
     
     gopherflow.SetupLogger(slog.LevelInfo)
     
     workflowRegistry := map[string]func() core.Workflow{
-                "DemoWorkflow": func() core.Workflow {
-                     return &workflows.DemoWorkflow{}
-                },
-                "GetIpWorkflow": func() core.Workflow {
-                // You can inject dependencies here
-                    return &workflows.GetIpWorkflow{
-                    // HTTPClient: httpClient,
-                    // MyService: myService,
-                    }
-                },
-        }
+        "DemoWorkflow": func() core.Workflow {
+            return &workflows.DemoWorkflow{}
+        },
+        "GetIpWorkflow": func() core.Workflow {
+            // You can inject dependencies here
+            return &workflows.GetIpWorkflow{
+                // HTTPClient: httpClient,
+                // MyService: myService,
+            }
+        },
+    }
     //uses the defaul ServeMux
     app := gopherflow.Setup(workflowRegistry)
     
