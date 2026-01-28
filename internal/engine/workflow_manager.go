@@ -20,10 +20,10 @@ var workflowQueue chan core.Workflow // Initialized in StartEngine using system 
 
 type WorkflowManager struct {
 	WorkflowRegistry   *map[string]func() core.Workflow
-	WorkflowRepo       *repository.WorkflowRepository
-	WorkflowActionRepo *repository.WorkflowActionRepository
-	executorRepo       *repository.ExecutorRepository
-	DefinitionRepo     *repository.WorkflowDefinitionRepository
+	WorkflowRepo       WorkflowRepo
+	WorkflowActionRepo WorkflowActionRepo
+	executorRepo       ExecutorRepo
+	DefinitionRepo     DefinitionRepo
 	executorID         int64
 	wakeup             chan struct{}
 	clock              core.Clock
@@ -69,8 +69,8 @@ func (wm *WorkflowManager) DefinitionOverview(workflowType string) ([]repository
 	return wm.WorkflowRepo.GetDefinitionStateOverview(workflowType)
 }
 
-func NewWorkflowManager(workflowRepo *repository.WorkflowRepository, workflowActionRepo *repository.WorkflowActionRepository, executorRepo *repository.ExecutorRepository,
-	definitionRepo *repository.WorkflowDefinitionRepository, WorkflowRegistry *map[string]func() core.Workflow, clock core.Clock) *WorkflowManager {
+func NewWorkflowManager(workflowRepo WorkflowRepo, workflowActionRepo WorkflowActionRepo, executorRepo ExecutorRepo,
+	definitionRepo DefinitionRepo, WorkflowRegistry *map[string]func() core.Workflow, clock core.Clock) *WorkflowManager {
 	return &WorkflowManager{
 		WorkflowRegistry:   WorkflowRegistry,
 		WorkflowRepo:       workflowRepo,
@@ -107,7 +107,7 @@ func (wm *WorkflowManager) StartEngine(ctx context.Context, pollInterval time.Du
 		//create a new context for each worker
 		workerContext, _ := context.WithCancel(ctx)
 		workerContext = context.WithValue(ctx, "worker_id", i)
-		go Worker(workerContext, i, wm.executorID, *wm.WorkflowRepo, *wm.WorkflowActionRepo, workflowQueue)
+		go Worker(workerContext, i, wm.executorID, wm.WorkflowRepo, wm.WorkflowActionRepo, workflowQueue)
 	}
 
 	slog.Info("Workflow engine started", "poll_interval", pollInterval.String())
@@ -165,11 +165,11 @@ func startWorkflowRepairService(ctx context.Context, wm *WorkflowManager) {
 					//set the workflow to next execute now
 					err := wm.WorkflowRepo.UpdateNextActivationSpecific(wf.ID, time.Now())
 					if err != nil {
-						slog.ErrorContext(ctx, "Failed to repair update workflow next activation", wf.ID, err)
+						slog.ErrorContext(ctx, "Failed to repair update workflow next activation", "workflow_id", wf.ID, "error", err)
 					}
 					err = wm.WorkflowRepo.ClearExecutorId(wf.ID)
 					if err != nil {
-						slog.ErrorContext(ctx, "Failed to repair clear executor id", wf.ID, err)
+						slog.ErrorContext(ctx, "Failed to repair clear executor id", "workflow_id", wf.ID, "error", err)
 					}
 
 				}

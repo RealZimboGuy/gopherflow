@@ -5,16 +5,16 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/engine"
 )
 
 type ExecutorsController struct {
 	AuthController
-	ExecutorsRepo *repository.ExecutorRepository
+	ExecutorsRepo engine.ExecutorRepo
 }
 
 func NewExecutorsController(
-	workflowExecutorsRepo *repository.ExecutorRepository, userRepo *repository.UserRepository) *ExecutorsController {
+	workflowExecutorsRepo engine.ExecutorRepo, userRepo engine.UserRepo) *ExecutorsController {
 	return &ExecutorsController{
 		ExecutorsRepo: workflowExecutorsRepo,
 		AuthController: AuthController{

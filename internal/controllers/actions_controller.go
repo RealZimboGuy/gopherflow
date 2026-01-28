@@ -2,20 +2,21 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/RealZimboGuy/gopherflow/internal/engine"
 )
 
 type ActionsController struct {
 	AuthController
-	WorkflowRepo       *repository.WorkflowRepository
-	WorkflowActionRepo *repository.WorkflowActionRepository
+	WorkflowRepo       engine.WorkflowRepo
+	WorkflowActionRepo engine.WorkflowActionRepo
 }
 
-func NewActionsController(workflowRepo *repository.WorkflowRepository,
-	workflowActionsRepo *repository.WorkflowActionRepository, userRepo *repository.UserRepository) *ActionsController {
+func NewActionsController(workflowRepo engine.WorkflowRepo,
+	workflowActionsRepo engine.WorkflowActionRepo, userRepo engine.UserRepo) *ActionsController {
 	return &ActionsController{WorkflowRepo: workflowRepo,
 		WorkflowActionRepo: workflowActionsRepo, AuthController: AuthController{
 			UserRepo: userRepo,

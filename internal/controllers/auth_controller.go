@@ -5,15 +5,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/engine"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 )
 
 type AuthController struct {
-	UserRepo *repository.UserRepository
+	UserRepo engine.UserRepo
 }
 
-func NewBaseController(userRepo *repository.UserRepository) *AuthController {
+func NewBaseController(userRepo engine.UserRepo) *AuthController {
 	return &AuthController{UserRepo: userRepo}
 }
 

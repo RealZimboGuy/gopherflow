@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"runtime/debug"
 	"time"
 
 	"github.com/RealZimboGuy/gopherflow/internal/config"
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
@@ -18,7 +18,23 @@ import (
 )
 
 // Engine runs a workflow
-func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string) {
+func RunWorkflow(ctx context.Context, w core.Workflow, r WorkflowRepo, wa WorkflowActionRepo, executorID int64, workerID string) {
+
+	defer func() {
+		if rec := recover(); rec != nil {
+			slog.ErrorContext(ctx, "Panic in RunWorkflow", "error", rec, "stack", string(debug.Stack()))
+			_, _ = wa.Save(&domain.WorkflowAction{
+				WorkflowID:     w.GetWorkflowData().ID,
+				ExecutorID:     executorID,
+				ExecutionCount: w.GetWorkflowData().ExecutionCount,
+				Type:           "ERROR",
+				Name:           "PANIC",
+				Text:           fmt.Sprintf("Panic recovered: %v", rec),
+				DateTime:       time.Now(),
+			})
+			_ = r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "ERROR")
+		}
+	}()
 
 	slog.InfoContext(ctx, "Running workflow", "workflow_id", w.GetWorkflowData().ID, "worker_id", workerID)
 
@@ -94,8 +110,18 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 			panic(fmt.Sprintf("method %s should return (NextState or *NextState, error)", currentState))
 		}
 
-		ns, ok := results[0].Interface().(*models.NextState)
-		if !ok {
+		var ns *models.NextState
+		if results[0].Kind() == reflect.Ptr {
+			if val, ok := results[0].Interface().(*models.NextState); ok {
+				ns = val
+			}
+		} else if results[0].Kind() == reflect.Struct {
+			if val, ok := results[0].Interface().(models.NextState); ok {
+				ns = &val
+			}
+		}
+
+		if ns == nil {
 			panic(fmt.Sprintf("method %s did not return a NextState as first value", currentState))
 		}
 		// Second return value = error
@@ -144,14 +170,12 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 			return
 		}
 
-		nextStateObject := results[0].Interface().(*models.NextState)
-
-		if nextStateObject.ActionLog != "" {
-			_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "LOG", Name: currentState, Text: nextStateObject.ActionLog, DateTime: time.Now()})
+		if ns.ActionLog != "" {
+			_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "LOG", Name: currentState, Text: ns.ActionLog, DateTime: time.Now()})
 		}
 
 		//wake up parent if set
-		if results[0].Interface().(*models.NextState).WakeParent {
+		if ns.WakeParent {
 			if w.GetWorkflowData().ParentWorkflowID.Valid {
 				slog.InfoContext(ctx, "Waking up parent workflow", "workflow_id", w.GetWorkflowData().ID, "worker_id", workerID)
 				_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ParentWorkflowID.Int64, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "CHILD_WAKE", Name: currentState, Text: "Child Initiated Wake", DateTime: time.Now()})
@@ -163,7 +187,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 		}
 
 		// Process any child workflow requests
-		childWorkflows := results[0].Interface().(*models.NextState).ChildWorkflows
+		childWorkflows := ns.ChildWorkflows
 		if len(childWorkflows) > 0 {
 			slog.InfoContext(ctx, "Processing child workflow requests", "workflow_id", w.GetWorkflowData().ID, "count", len(childWorkflows), "worker_id", workerID)
 			for _, childReq := range childWorkflows {
@@ -232,7 +256,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 			}
 		}
 
-		nextExecution := nextStateObject.NextExecution
+		nextExecution := ns.NextExecution
 		// if the next execution is a valid date and time in the future then set it and break processing
 		if !nextExecution.IsZero() {
 			//if nextExecution.After(time.Now()) { // no need, if its in the past it will just run on the next pick up
@@ -245,7 +269,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 			break
 			//}
 		}
-		nextExecutionOffset := results[0].Interface().(*models.NextState).NextExecutionOffset
+		nextExecutionOffset := ns.NextExecutionOffset
 		if nextExecutionOffset != "" {
 			slog.InfoContext(ctx, "Setting next activation (offset)", "workflow_id", w.GetWorkflowData().ID, "offset", nextExecutionOffset, "worker_id", workerID)
 			if err := r.UpdateNextActivationOffset(w.GetWorkflowData().ID, nextExecutionOffset); err != nil {
@@ -269,7 +293,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r repository.WorkflowRepo
 
 }
 
-func processWorflowCompleted(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string) bool {
+func processWorflowCompleted(ctx context.Context, w core.Workflow, r WorkflowRepo, wa WorkflowActionRepo, executorID int64, workerID string, currentState string) bool {
 	slog.InfoContext(ctx, "Workflow completed", "worker_id", workerID)
 	err := r.UpdateWorkflowStatus(w.GetWorkflowData().ID, "FINISHED")
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount, Type: "END", Name: currentState, Text: "workflow complete", DateTime: time.Now()})
@@ -280,7 +304,7 @@ func processWorflowCompleted(ctx context.Context, w core.Workflow, r repository.
 	return false
 }
 
-func processStateExecutionError(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, wa repository.WorkflowActionRepository, executorID int64, workerID string, currentState string, callErr error) {
+func processStateExecutionError(ctx context.Context, w core.Workflow, r WorkflowRepo, wa WorkflowActionRepo, executorID int64, workerID string, currentState string, callErr error) {
 	slog.ErrorContext(ctx, "Error executing state method", "state", currentState, "error", callErr, "worker_id", workerID)
 	_, _ = wa.Save(&domain.WorkflowAction{
 		WorkflowID:     w.GetWorkflowData().ID,
@@ -316,7 +340,7 @@ func processStateExecutionError(ctx context.Context, w core.Workflow, r reposito
 	return
 }
 
-func compareAndSaveWorkflowStateVars(ctx context.Context, w core.Workflow, r repository.WorkflowRepository, workerID string) bool {
+func compareAndSaveWorkflowStateVars(ctx context.Context, w core.Workflow, r WorkflowRepo, workerID string) bool {
 	jsonString, _ := json.Marshal(w.GetStateVariables())
 
 	if string(jsonString) != w.GetWorkflowData().StateVars.String {

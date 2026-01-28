@@ -6,16 +6,16 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
+	"github.com/RealZimboGuy/gopherflow/internal/engine"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 type UsersController struct {
 	AuthController
-	UserRepo *repository.UserRepository
+	UserRepo engine.UserRepo
 }
 
-func NewUsersController(userRepo *repository.UserRepository) *UsersController {
+func NewUsersController(userRepo engine.UserRepo) *UsersController {
 	return &UsersController{
 		UserRepo: userRepo,
 		AuthController: AuthController{
@@ -38,7 +38,7 @@ func (c *UsersController) handleGetUsers(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	
+
 	users, err := c.UserRepo.FindAll()
 	if err != nil {
 		slog.Error("Failed to get users", "error", err)

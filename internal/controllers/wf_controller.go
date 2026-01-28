@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/RealZimboGuy/gopherflow/internal/engine"
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
@@ -23,13 +22,13 @@ import (
 // WorkflowsController holds dependencies for workflow HTTP endpoints.
 type WorkflowsController struct {
 	AuthController
-	WorkflowRepo       *repository.WorkflowRepository
-	WorkflowActionRepo *repository.WorkflowActionRepository
+	WorkflowRepo       engine.WorkflowRepo
+	WorkflowActionRepo engine.WorkflowActionRepo
 	WorkflowManager    *engine.WorkflowManager
 }
 
-func NewWorkflowsController(workflowRepo *repository.WorkflowRepository, workflowActionsRepo *repository.WorkflowActionRepository, workflowManager *engine.WorkflowManager,
-	userRepo *repository.UserRepository) *WorkflowsController {
+func NewWorkflowsController(workflowRepo engine.WorkflowRepo, workflowActionsRepo engine.WorkflowActionRepo, workflowManager *engine.WorkflowManager,
+	userRepo engine.UserRepo) *WorkflowsController {
 	return &WorkflowsController{WorkflowRepo: workflowRepo, WorkflowActionRepo: workflowActionsRepo, WorkflowManager: workflowManager, AuthController: AuthController{
 		UserRepo: userRepo,
 	}}

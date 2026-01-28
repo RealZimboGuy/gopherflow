@@ -5,12 +5,11 @@ import (
 	"log/slog"
 	"strconv"
 
-	"github.com/RealZimboGuy/gopherflow/internal/repository"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 )
 
 // Worker function that processes workflows from the queue
-func Worker(ctx context.Context, id int, executorID int64, workflowRepository repository.WorkflowRepository, workflowActionRepository repository.WorkflowActionRepository, workflowQueue <-chan core.Workflow) {
+func Worker(ctx context.Context, id int, executorID int64, workflowRepository WorkflowRepo, workflowActionRepository WorkflowActionRepo, workflowQueue <-chan core.Workflow) {
 	for {
 		for {
 			select {
