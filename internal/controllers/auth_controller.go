@@ -7,6 +7,7 @@ import (
 
 	"github.com/RealZimboGuy/gopherflow/internal/engine"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 )
 
 type AuthController struct {
@@ -26,7 +27,7 @@ func (wc *AuthController) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		// 1) Try session cookie
 		if c, err := r.Cookie("sessionId"); err == nil && c.Value != "" {
 			u, err := wc.UserRepo.FindBySessionID(c.Value, time.Now().UTC())
-			if err == nil && u != nil {
+			if err == nil && isUserEnabled(u) {
 				ctx := context.WithValue(r.Context(), core.CtxKeyUsername, u.Username)
 				r = r.WithContext(ctx)
 				next(w, r)
@@ -38,7 +39,7 @@ func (wc *AuthController) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		apiKey := r.Header.Get("X-API-Key")
 		if apiKey != "" {
 			u, err := wc.UserRepo.FindByApiKey(apiKey)
-			if err == nil && u != nil {
+			if err == nil && isUserEnabled(u) {
 
 				// Add the username to the request context
 				ctx := context.WithValue(r.Context(), core.CtxKeyUsername, u.Username)
@@ -53,4 +54,11 @@ func (wc *AuthController) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		// Otherwise redirect to login for browser flows
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	}
+}
+
+func isUserEnabled(u *domain.User) bool {
+	if u == nil {
+		return false
+	}
+	return u.Enabled.Valid && u.Enabled.Bool
 }

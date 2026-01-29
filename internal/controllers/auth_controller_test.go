@@ -107,7 +107,10 @@ func TestAuthController_RequireAuth_SessionCookie(t *testing.T) {
 	mockRepo := &MockUserRepo{
 		FindBySessionIDFunc: func(sessionID string, now time.Time) (*domain.User, error) {
 			if sessionID == "valid_session" {
-				return &domain.User{Username: "testuser"}, nil
+				return &domain.User{
+					Username: "testuser",
+					Enabled:  sql.NullBool{Valid: true, Bool: true},
+				}, nil
 			}
 			return nil, nil
 		},
@@ -137,7 +140,10 @@ func TestAuthController_RequireAuth_ApiKey(t *testing.T) {
 	mockRepo := &MockUserRepo{
 		FindByApiKeyFunc: func(apiKey string) (*domain.User, error) {
 			if apiKey == "valid_key" {
-				return &domain.User{Username: "api_user"}, nil
+				return &domain.User{
+					Username: "api_user",
+					Enabled:  sql.NullBool{Valid: true, Bool: true},
+				}, nil
 			}
 			return nil, nil
 		},
@@ -160,6 +166,64 @@ func TestAuthController_RequireAuth_ApiKey(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+}
+
+func TestAuthController_RequireAuth_SessionCookie_DisabledUser(t *testing.T) {
+	mockRepo := &MockUserRepo{
+		FindBySessionIDFunc: func(sessionID string, now time.Time) (*domain.User, error) {
+			if sessionID == "disabled_session" {
+				return &domain.User{
+					Username: "disabled_user",
+					Enabled:  sql.NullBool{Valid: true, Bool: false},
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+	ac := NewBaseController(mockRepo)
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("Next handler should not be called for disabled user")
+	})
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.AddCookie(&http.Cookie{Name: "sessionId", Value: "disabled_session"})
+	w := httptest.NewRecorder()
+
+	ac.RequireAuth(nextHandler).ServeHTTP(w, req)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("Expected redirect 303, got %d", w.Code)
+	}
+}
+
+func TestAuthController_RequireAuth_ApiKey_DisabledUser(t *testing.T) {
+	mockRepo := &MockUserRepo{
+		FindByApiKeyFunc: func(apiKey string) (*domain.User, error) {
+			if apiKey == "disabled_key" {
+				return &domain.User{
+					Username: "disabled_api_user",
+					Enabled:  sql.NullBool{Valid: true, Bool: false},
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+	ac := NewBaseController(mockRepo)
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("Next handler should not be called for disabled user")
+	})
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.Header.Set("X-API-Key", "disabled_key")
+	w := httptest.NewRecorder()
+
+	ac.RequireAuth(nextHandler).ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected unauthorized 401, got %d", w.Code)
 	}
 }
 
