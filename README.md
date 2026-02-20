@@ -23,7 +23,7 @@ Small, pragmatic workflow engine for Go with a built-in web console. Define work
 ## Quick start
 
 Prerequisites:
-- Go 1.24+ (or Docker if you prefer containers)
+- Go 1.26+ (or Docker if you prefer containers)
 
 ## Demo Application
 This starts the demo application with a SQLite database, there are two workflows
@@ -36,7 +36,7 @@ This starts the demo application with a SQLite database, there are two workflows
         -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db\
         -v "$(pwd):/data"\
         --security-opt seccomp=unconfined \
-        juliangpurse/gopherflow:1.6.0
+        juliangpurse/gopherflow:1.7.0
 
 *note the --security-opt seccomp=unconfined  is required because of sqllite being run in a container*
 
@@ -92,7 +92,7 @@ refer to the example application:  https://github.com/RealZimboGuy/gopherflow-ex
 
 ### Specific details
 
-    go get github.com/RealZimboGuy/gopherflow@v1.6.0
+    go get github.com/RealZimboGuy/gopherflow@v1.7.0
 
 a struct that extends the base 
 ```go

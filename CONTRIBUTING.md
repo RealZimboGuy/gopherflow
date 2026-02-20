@@ -10,7 +10,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ### Prerequisites
 
-- Go 1.24+ (or Docker if you prefer containers)
+- Go 1.26+ (or Docker if you prefer containers)
 - Basic understanding of workflow engines and state machines
 
 ### Project Setup
