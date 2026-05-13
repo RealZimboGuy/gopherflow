@@ -136,27 +136,26 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r WorkflowRepo, wa Workfl
 
 		nextState := ns.Name
 		// Validate if the transition is allowed (one-to-many)
-		if nextState != "END" { // keep legacy allowance for literal END if ever used
-			allowedList, ok := stateMap[currentState]
-			if !ok {
-				_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "ERROR", Name: "Invalid Transition", Text: "no transitions defined for current state", DateTime: time.Now()})
-				panic(fmt.Sprintf("invalid state transition from %s to %s (no transitions)", currentState, nextState))
+		allowedList, ok := stateMap[currentState]
+		if !ok {
+			_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "ERROR", Name: "Invalid Transition", Text: "no transitions defined for current state", DateTime: time.Now()})
+			panic(fmt.Sprintf("invalid state transition from %s to %s (no transitions)", currentState, nextState))
+		}
+		valid := false
+		for _, t := range allowedList {
+			if t == nextState {
+				valid = true
+				break
 			}
-			valid := false
-			for _, t := range allowedList {
-				if t == nextState {
-					valid = true
-					break
-				}
-			}
-			if !valid {
-				_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "ERROR", Name: "Invalid Transition", Text: "transition is not allowed", DateTime: time.Now()})
-				panic(fmt.Sprintf("invalid state transition from %s to %s", currentState, nextState))
-			}
+		}
+		if !valid {
+			_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "ERROR", Name: "Invalid Transition", Text: "transition is not allowed", DateTime: time.Now()})
+			panic(fmt.Sprintf("invalid state transition from %s to %s", currentState, nextState))
 		}
 
 		slog.InfoContext(ctx, "Transitioning state", "from", currentState, "to", nextState, "worker_id", workerID)
 		_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().RetryCount, Type: "TRANSITION", Name: currentState, Text: "From " + currentState + " to " + nextState, DateTime: time.Now()})
+
 		currentState = nextState
 
 		slog.InfoContext(ctx, "Updating workflow state", "workflow_id", w.GetWorkflowData().ID, "state", currentState, "worker_id", workerID)
