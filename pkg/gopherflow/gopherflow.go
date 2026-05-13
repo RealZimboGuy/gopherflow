@@ -94,6 +94,7 @@ func SetupWithClock(registry map[string]func() core.Workflow, clock core.Clock) 
 	controllers.NewWorkflowsController(app.Repos.Workflows, app.Repos.Actions, app.Manager, app.Repos.Users).RegisterRoutes()
 	controllers.NewActionsController(app.Repos.Workflows, app.Repos.Actions, app.Repos.Users).RegisterRoutes()
 	controllers.NewExecutorsController(app.Repos.Executors, app.Repos.Users).RegisterRoutes()
+	controllers.NewUsersController(app.Repos.Users).RegisterRoutes()
 	web.NewWebController(app.Manager, app.Repos.Users).RegisterRoutes()
 
 	return app
