@@ -254,12 +254,14 @@ In your parent workflow state transition:
 
 ```go
 func (w *MyParentWorkflow) SpawnChildren(ctx context.Context) (*models.NextState, error) {
-    // Create child workflow requests
+    // Create child workflow requests.
+    // Signature: CreateChildWorkflowRequest(workflowType, businessKey, stateVars).
+    // The child's initial state is taken from the child workflow's own InitialState();
+    // the engine assigns an externalId automatically.
     childRequests := []models.ChildWorkflowRequest{
         gopherflow.CreateChildWorkflowRequest(
             "MyChildWorkflow",
             fmt.Sprintf("child-%d", w.WorkflowState.ID),
-            "ChildInit",
             map[string]string{"input": "value"},
         ),
     }
