@@ -971,6 +971,7 @@ func (wc *WebController) loginSubmitHandler(w http.ResponseWriter, r *http.Reque
 	if !u.Enabled.Valid || !u.Enabled.Bool {
 		w.WriteHeader(http.StatusUnauthorized)
 		wc.renderLogin(w, map[string]any{"Error": "User is disabled"})
+		return
 	}
 	// Compare bcrypt hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)); err != nil {
