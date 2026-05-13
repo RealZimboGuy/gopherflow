@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestUsersController_GetUsers(t *testing.T) {
@@ -42,16 +43,19 @@ func TestUsersController_GetUsers(t *testing.T) {
 }
 
 func TestUsersController_CreateUser(t *testing.T) {
+	var capturedPassword string
+	var capturedEnabled sql.NullBool
 	mockUserRepo := &MockUserRepo{
 		SaveFunc: func(user *domain.User) (int64, error) {
+			capturedPassword = user.Password
+			capturedEnabled = user.Enabled
 			return 123, nil
 		},
 	}
 
 	c := NewUsersController(mockUserRepo)
 
-	newUser := domain.User{Username: "newuser", Password: "password"}
-	body, _ := json.Marshal(newUser)
+	body := []byte(`{"username":"newuser","password":"password"}`)
 	req := httptest.NewRequest("POST", "/api/users", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -68,6 +72,15 @@ func TestUsersController_CreateUser(t *testing.T) {
 	}
 	if user.ID != 123 {
 		t.Errorf("Expected ID 123, got %d", user.ID)
+	}
+	if capturedPassword == "password" || capturedPassword == "" {
+		t.Errorf("expected password to be bcrypt-hashed, got %q", capturedPassword)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(capturedPassword), []byte("password")); err != nil {
+		t.Errorf("stored hash does not verify against plaintext password: %v", err)
+	}
+	if !capturedEnabled.Valid || !capturedEnabled.Bool {
+		t.Errorf("expected new user to default to enabled=true, got %+v", capturedEnabled)
 	}
 }
 
