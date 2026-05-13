@@ -151,13 +151,3 @@ func (w *DemoChildWorkflow) ChildWakeParent(ctx context.Context) (*models.NextSt
 		WakeParent: true,
 	}, nil
 }
-
-// ChildFinish finishes the child workflow
-func (w *DemoChildWorkflow) ChildFinish(ctx context.Context) (*models.NextState, error) {
-	slog.InfoContext(ctx, "Child workflow finishing", "workflow_id", w.WorkflowState.ID)
-
-	return &models.NextState{
-		Name:      "END", // Special state name that marks workflow completion
-		ActionLog: "Child workflow complete",
-	}, nil
-}

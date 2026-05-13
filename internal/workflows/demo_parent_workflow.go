@@ -185,15 +185,3 @@ func (w *DemoParentWorkflow) ParentWaitForChildren(ctx context.Context) (*models
 		ActionLog: "All child workflows complete",
 	}, nil
 }
-
-// ParentFinish finishes the workflow
-func (w *DemoParentWorkflow) ParentFinish(ctx context.Context) (*models.NextState, error) {
-	slog.InfoContext(ctx, "Parent workflow finishing", "workflow_id", w.WorkflowState.ID)
-
-	// In a real workflow, you might want to do some final processing here
-
-	return &models.NextState{
-		Name:      "END", // Special state name that marks workflow completion
-		ActionLog: "Parent workflow complete",
-	}, nil
-}
