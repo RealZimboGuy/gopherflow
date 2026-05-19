@@ -334,11 +334,12 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 	}
 
 	type defVM struct {
-		Name        string
-		Description string
-		FlowChart   string
-		Created     string
-		Updated     string
+		Name               string
+		Description        string
+		FlowChart          string
+		FlowChartAnnotated string
+		Created            string
+		Updated            string
 	}
 	var dvm defVM
 	if def != nil {
@@ -393,15 +394,27 @@ func (wc *WebController) workflowDetailsHandler(w http.ResponseWriter, r *http.R
 
 	// Build States options from workflow definition if available (fallback: current state only)
 	var stateOptions []stateOption
+	nodeTypes := make(map[string]models.StateType)
 	// Prefer states from the workflow implementation via engine registry
 	if inst, err := engine.CreateWorkflowInstance(wc.manager, wf.WorkflowType); err == nil && inst != nil {
 		for _, s := range inst.GetAllStates() {
 			stateOptions = append(stateOptions, stateOption{Name: s.Name})
+			nodeTypes[s.Name] = s.StateType
 		}
 	}
 	// Fallback: include current state if no states discovered
 	if len(stateOptions) == 0 && wf.State != "" {
 		stateOptions = []stateOption{{Name: wf.State}}
+	}
+
+	// Per-workflow executed-path overlay for the flow diagram.
+	if def != nil {
+		var acts []domain.WorkflowAction
+		if actions != nil {
+			acts = *actions
+		}
+		path := extractExecutedPath(acts, wf.State)
+		dvm.FlowChartAnnotated = annotateFlowChart(dvm.FlowChart, path, nodeTypes)
 	}
 
 	// Fetch child workflows if any
