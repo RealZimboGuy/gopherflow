@@ -157,7 +157,12 @@
                 </section>
                 <section class="bg-white rounded shadow-md p-6">
                     <h2>Flow Diagram</h2>
-                    <pre class="mermaid">{{ .WorkflowDefinition.FlowChart }}</pre>
+                    <pre class="mermaid">{{ .WorkflowDefinition.FlowChartAnnotated }}</pre>
+                    <div class="mt-3 text-xs text-gray-600 flex flex-wrap gap-4">
+                        <span><span style="display:inline-block;width:20px;border-top:3px solid #2563eb;vertical-align:middle;"></span> executed transition</span>
+                        <span><span style="display:inline-block;width:12px;height:12px;background:#dbeafe;border:1px solid #2563eb;vertical-align:middle;"></span> visited state</span>
+                        <span><span style="display:inline-block;width:12px;height:12px;border:3px solid #1d4ed8;vertical-align:middle;"></span> current state</span>
+                    </div>
                 </section>
             </div>
             <div>
