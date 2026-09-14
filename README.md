@@ -10,7 +10,10 @@
 
 **Temporal-style durable workflows without running Temporal.**
 
-<p align="center"><img src="logo_transparent.png" alt="GopherFlow" style="max-width:300px;"></p>
+<p align="center">
+  <img src="logo_transparent.png" alt="GopherFlow" height="380">
+  <img src="screenshots/executed-path.gif" alt="A workflow advancing through its states, with the executed path highlighted on the generated diagram" height="380">
+</p>
 
 Write workflows as plain Go structs. Every state transition is persisted to a database you already run — Postgres, MySQL or SQLite — so workflows survive restarts, crashes and deploys, and resume from where they stopped. The engine, the REST API and the web console are a library you import into your own binary: no control-plane cluster, no broker, no sidecar, no separate worker fleet to operate.
 
