@@ -1,8 +1,35 @@
 # GopherFlow
 
-Small, pragmatic workflow engine for Go with a built-in web console. Define workflows in Go, persist their execution, and observe/operate them via the web UI.
+**Temporal-style durable workflows without running Temporal.**
 
 <p align="center"><img src="logo_transparent.png" alt="GopherFlow" style="max-width:300px;"></p>
+
+Write workflows as plain Go structs. Every state transition is persisted to a database you already run — Postgres, MySQL or SQLite — so workflows survive restarts, crashes and deploys, and resume from where they stopped. The engine, the REST API and the web console are a library you import into your own binary: no control-plane cluster, no broker, no sidecar, no separate worker fleet to operate.
+
+```
+go get github.com/RealZimboGuy/gopherflow@v1.9.0
+```
+
+## Why GopherFlow
+
+- **One static binary, one database.** `gopherflow.Setup(registry)` in your `main()` gives you the engine, the API and the console. Schema migrations run themselves on start. Pure Go, no cgo — the container runs under the default seccomp profile and cross-compiles without a C toolchain.
+- **No determinism rules to learn.** States are ordinary Go methods that return the next state. Keep them idempotent and the engine handles persistence, retry and backoff — there is no replay model and no workflow-versioning trap.
+- **Operable on day one.** Dashboard, search, per-workflow action history, live executor list, and a flow diagram generated from the definition with the executed path overlaid.
+- **Scale by starting another copy.** Executors register in the database, heartbeat, and repair each other's stuck workflows. Adding capacity means running your binary again.
+
+## How it compares
+
+|                             | **GopherFlow**              | **Temporal (self-hosted)**                                                    | **Dagu**                      | **Hand-rolled cron + DB** |
+| --------------------------- | --------------------------- | ----------------------------------------------------------------------------- | ----------------------------- | ------------------------- |
+| What you operate            | your binary + a DB          | frontend / history / matching / worker services, a DB, often Elasticsearch, plus your own workers | one binary + files on disk    | your binary + a DB        |
+| How workflows are defined   | Go structs and methods      | Go / Java / TS / Python SDK, replay-deterministic code                         | YAML DAGs of commands         | however you write them    |
+| Durable state, retry, resume| built in                    | built in                                                                      | per-step retry and run history| you build it              |
+| Web console                 | built in                    | built in (separate UI service)                                                | built in                      | you build it              |
+| Parent / child, parallel fan-out | yes                    | yes, plus signals, queries, timers, sagas                                     | DAG deps and nested DAGs      | you build it              |
+| What you have to learn      | one Go interface            | determinism, versioning, task queues                                          | the YAML schema               | nothing, until it grows   |
+| Scale ceiling               | thousands of workflows/min against one DB | very high, multi-cluster                                        | single-node scheduler         | whatever you build        |
+
+Choose **Temporal** if you need signals and queries, workers in several languages, or scale that outgrows a single database. Choose **Dagu** if your steps are shell commands on a schedule rather than Go code. Choose **GopherFlow** if you want durable, retryable, observable business workflows written in Go — without operating another distributed system to get them.
 
 ## Highlights
 
@@ -32,13 +59,10 @@ This starts the demo application with a SQLite database, there are two workflows
 * GetIpWorkflow - gets the current public IP address from ifconfig.io and puts it into a state variable
 
         docker run -p 8080:8080 \
-        -e GFLOW_DATABASE_TYPE=SQLLITE\
-        -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db\
-        -v "$(pwd):/data"\
-        --security-opt seccomp=unconfined \
-        juliangpurse/gopherflow:1.8.0
-
-*note the --security-opt seccomp=unconfined  is required because of sqllite being run in a container*
+        -e GFLOW_DATABASE_TYPE=SQLLITE \
+        -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
+        -v "$(pwd):/data" \
+        juliangpurse/gopherflow:1.9.0
 
 Access the web console at http://localhost:8080/
 
@@ -92,7 +116,7 @@ refer to the example application:  https://github.com/RealZimboGuy/gopherflow-ex
 
 ### Specific details
 
-    go get github.com/RealZimboGuy/gopherflow@v1.8.0
+    go get github.com/RealZimboGuy/gopherflow@v1.9.0
 
 a struct that extends the base 
 ```go

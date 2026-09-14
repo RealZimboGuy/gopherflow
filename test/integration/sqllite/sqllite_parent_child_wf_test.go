@@ -20,7 +20,7 @@ func TestParentChildWorkflowRepository(t *testing.T) {
 		// Open database connection directly - we'll use the environment variables
 		// that have been set by RunTestWithSetup to ensure the file path is correct
 		dbName := os.Getenv("GFLOW_DATABASE_SQLLITE_FILE_NAME")
-		db, err := sql.Open("sqlite3", dbName)
+		db, err := sql.Open("sqlite", dbName)
 		if err != nil {
 			t.Fatalf("Failed to open database: %v", err)
 		}

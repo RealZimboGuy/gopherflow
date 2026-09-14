@@ -25,10 +25,10 @@ import (
 	migrate "github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/golang-migrate/migrate/v4/source/iofs"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // App wires together the workflow engine, repositories, and HTTP server.
@@ -181,7 +181,8 @@ func setupSqlLiteDatabase() *sql.DB {
 	if fileName == "" {
 		panic("DATABASE_SQLLITE_FILE_NAME must be set")
 	}
-	dbURL := "sqlite3://" + fileName
+	dsn := sqliteDSN(fileName)
+	dbURL := "sqlite://" + dsn
 	slog.Info("Using SQLite database", "file", fileName)
 	slog.Info("Running migrations")
 	if err := runMigrationsFromEmbed("sqllite3", dbURL); err != nil {
@@ -189,7 +190,7 @@ func setupSqlLiteDatabase() *sql.DB {
 		os.Exit(1)
 	}
 	slog.Info("Opening SQLite database")
-	db, err := sql.Open("sqlite3", fileName)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open SQLite DB: %v", err)
 	}

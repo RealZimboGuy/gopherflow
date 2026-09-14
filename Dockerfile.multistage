@@ -1,7 +1,7 @@
 #Run with
-#  docker build --platform linux/amd64 -t juliangpurse/gopherflow:1.8.0 -f Dockerfile.multistage . ; docker push juliangpurse/gopherflow:1.8.0
+#  docker build --platform linux/amd64 -t juliangpurse/gopherflow:1.9.0 -f Dockerfile.multistage . ; docker push juliangpurse/gopherflow:1.9.0
 
- #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v "$(pwd):/data" juliangpurse/gopherflow:1.8.0
+ #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v "$(pwd):/data" juliangpurse/gopherflow:1.9.0
 
 # Build the application from source
 FROM golang:1.26 AS build-stage
@@ -13,7 +13,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=1 GOOS=linux go build -o /gopher-flow cmd/gopherflow/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /gopher-flow cmd/gopherflow/main.go
 
 # Run the tests in the container
 FROM build-stage AS run-test-stage
@@ -24,7 +24,7 @@ FROM busybox AS data-stage
 RUN mkdir -p /data
 
 # Deploy the application binary into a lean image
-FROM gcr.io/distroless/base-debian12 AS build-release-stage
+FROM gcr.io/distroless/static-debian12 AS build-release-stage
 
 WORKDIR /
 
