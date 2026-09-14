@@ -2,10 +2,13 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -29,12 +32,16 @@ func nextPort() int {
 func RunTestWithSetup(t *testing.T, testFunc func(t *testing.T, port int)) {
 	port := nextPort()
 	os.Setenv("HTTP_ADDR", ":"+strconv.Itoa(port))
-	container, _ := SetupMySQLTestInstance(t.Context())
+	container, dsn, err := SetupMySQLTestInstance(t.Context())
+	if err != nil {
+		t.Fatalf("could not start the MySQL test container: %v", err)
+	}
 	defer container.Terminate(t.Context())
+	waitForDB(t, dsn)
 	testFunc(t, port)
 }
 
-func SetupMySQLTestInstance(ctx context.Context) (testcontainers.Container, string) {
+func SetupMySQLTestInstance(ctx context.Context) (testcontainers.Container, string, error) {
 	req := testcontainers.ContainerRequest{
 		Image:        "mysql:8.1", // MySQL image
 		ExposedPorts: []string{"3306/tcp"},
@@ -59,7 +66,7 @@ func SetupMySQLTestInstance(ctx context.Context) (testcontainers.Container, stri
 		Started:          true,
 	})
 	if err != nil {
-		slog.Error("error starting MySQL container", "error", err)
+		return nil, "", fmt.Errorf("start MySQL container: %w", err)
 	}
 
 	port, _ := container.MappedPort(ctx, "3306")
@@ -74,7 +81,7 @@ func SetupMySQLTestInstance(ctx context.Context) (testcontainers.Container, stri
 		slog.Error("DB migration failed", "error", err)
 	}
 
-	return container, dsn
+	return container, dsn, nil
 }
 
 // runMigrationsFromEmbed runs database migrations from the embedded migrations FS
@@ -95,4 +102,40 @@ func runMigrationsFromEmbed(migrationsPath string, dbURL string) error {
 		return err
 	}
 	return nil
+}
+
+// waitForDB polls until the database accepts a real query. The container wait
+// strategy watches log output, which can fire while the server is still
+// restarting after initialisation, so verify with an actual connection.
+func waitForDB(t *testing.T, dsn string) {
+	t.Helper()
+
+	connStr := strings.TrimPrefix(dsn, "mysql://")
+
+	deadline := time.Now().Add(90 * time.Second)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		db, err := sql.Open("mysql", connStr)
+		if err != nil {
+			lastErr = err
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+		if err := db.Ping(); err != nil {
+			lastErr = err
+			_ = db.Close()
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+		var one int
+		if err := db.QueryRow("SELECT 1").Scan(&one); err != nil {
+			lastErr = err
+			_ = db.Close()
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+		_ = db.Close()
+		return
+	}
+	t.Fatalf("database never became ready: %v", lastErr)
 }
