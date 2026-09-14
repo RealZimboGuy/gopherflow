@@ -29,6 +29,7 @@ type testWeb struct {
 	Actions  *repository.WorkflowActionRepository
 	Defs     *repository.WorkflowDefinitionRepository
 	Execs    *repository.ExecutorRepository
+	DB       *sql.DB
 }
 
 func newTestWeb(t *testing.T) *testWeb {
@@ -82,6 +83,7 @@ func newTestWeb(t *testing.T) *testWeb {
 		Actions:  actionRepo,
 		Defs:     defRepo,
 		Execs:    execRepo,
+		DB:       db,
 	}
 }
 
