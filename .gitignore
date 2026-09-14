@@ -11,3 +11,5 @@ private_settings.go
 # Assistant/agent working notes - never part of the repo
 docs/superpowers/
 docs/plans/
+
+coverage.out

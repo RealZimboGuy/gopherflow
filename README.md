@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/RealZimboGuy/gopherflow/actions/workflows/ci.yml/badge.svg)](https://github.com/RealZimboGuy/gopherflow/actions/workflows/ci.yml)
 [![Lint](https://github.com/RealZimboGuy/gopherflow/actions/workflows/lint.yml/badge.svg)](https://github.com/RealZimboGuy/gopherflow/actions/workflows/lint.yml)
+[![codecov](https://codecov.io/gh/RealZimboGuy/gopherflow/branch/master/graph/badge.svg)](https://codecov.io/gh/RealZimboGuy/gopherflow)
 [![Go Reference](https://pkg.go.dev/badge/github.com/RealZimboGuy/gopherflow.svg)](https://pkg.go.dev/github.com/RealZimboGuy/gopherflow)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/RealZimboGuy/gopherflow)](https://github.com/RealZimboGuy/gopherflow/blob/master/go.mod)
 [![Docker Image](https://img.shields.io/docker/v/juliangpurse/gopherflow?label=docker&sort=semver)](https://hub.docker.com/r/juliangpurse/gopherflow)

@@ -1,0 +1,16 @@
+# Coverage must stay at or above the awesome-go threshold of 80%.
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        # Allow tiny fluctuations, but not a slide back under the threshold.
+        threshold: 0.5%
+    patch:
+      default:
+        target: 80%
+        threshold: 5%
+
+comment:
+  layout: "reach, diff, files"
+  require_changes: true

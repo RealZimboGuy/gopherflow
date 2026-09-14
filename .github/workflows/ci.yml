@@ -68,8 +68,28 @@ jobs:
       # -p 1 runs one package at a time. Without it the MySQL, Postgres and
       # SQLite suites each start containers and a full engine concurrently,
       # which starves the runner and produces failures that look like flakes.
+      #
+      # -coverpkg attributes coverage to internal and pkg from whichever suite
+      # exercises them. Without it the integration suites contribute nothing and
+      # the reported figure roughly halves.
+      #
+      # -count=1 disables the test cache. A cached package reuses a profile
+      # built against its source at cache time, so after any edit the merged
+      # profile mixes stale and current line numbers and the total is wrong.
       - name: Test
-        run: go test -p 1 -timeout 20m ./...
+        run: |
+          go test -count=1 -p 1 -timeout 20m \
+            -coverpkg=./internal/...,./pkg/... \
+            -coverprofile=coverage.out \
+            ./...
+          go tool cover -func=coverage.out | tail -1
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
 
   docker:
     name: Docker image
