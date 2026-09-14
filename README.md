@@ -1,5 +1,12 @@
 # GopherFlow
 
+[![CI](https://github.com/RealZimboGuy/gopherflow/actions/workflows/ci.yml/badge.svg)](https://github.com/RealZimboGuy/gopherflow/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/RealZimboGuy/gopherflow.svg)](https://pkg.go.dev/github.com/RealZimboGuy/gopherflow)
+[![Go Report Card](https://goreportcard.com/badge/github.com/RealZimboGuy/gopherflow)](https://goreportcard.com/report/github.com/RealZimboGuy/gopherflow)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/RealZimboGuy/gopherflow)](https://github.com/RealZimboGuy/gopherflow/blob/master/go.mod)
+[![Docker Image](https://img.shields.io/docker/v/juliangpurse/gopherflow?label=docker&sort=semver)](https://hub.docker.com/r/juliangpurse/gopherflow)
+[![License](https://img.shields.io/github/license/RealZimboGuy/gopherflow)](LICENSE)
+
 **Temporal-style durable workflows without running Temporal.**
 
 <p align="center"><img src="logo_transparent.png" alt="GopherFlow" style="max-width:300px;"></p>

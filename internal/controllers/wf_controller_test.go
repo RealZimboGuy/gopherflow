@@ -88,16 +88,16 @@ func (m *MockWorkflowRepo) SearchWorkflows(req models.SearchWorkflowRequest) (*[
 func (m *MockWorkflowRepo) FindByExternalId(id string) (*domain.Workflow, error)      { return nil, nil }
 func (m *MockWorkflowRepo) SaveWorkflowVariablesAndTouch(id int64, vars string) error { return nil }
 
-type MockWorkflowActionRepo struct{
+type MockWorkflowActionRepo struct {
 	FindAllByWorkflowIDFunc func(workflowID int64) (*[]domain.WorkflowAction, error)
-	SaveFunc func(a *domain.WorkflowAction) (int64, error)
+	SaveFunc                func(a *domain.WorkflowAction) (int64, error)
 }
 
-func (m *MockWorkflowActionRepo) Save(a *domain.WorkflowAction) (int64, error) { 
+func (m *MockWorkflowActionRepo) Save(a *domain.WorkflowAction) (int64, error) {
 	if m.SaveFunc != nil {
 		return m.SaveFunc(a)
 	}
-	return 1, nil 
+	return 1, nil
 }
 func (m *MockWorkflowActionRepo) FindAllByWorkflowID(workflowID int64) (*[]domain.WorkflowAction, error) {
 	if m.FindAllByWorkflowIDFunc != nil {
@@ -125,23 +125,23 @@ func (m *MockDefinitionRepo) FindByName(name string) (*domain.WorkflowDefinition
 }
 func (m *MockDefinitionRepo) Save(def *domain.WorkflowDefinition) error { return nil }
 
-type MockExecutorRepo struct{
+type MockExecutorRepo struct {
 	GetExecutorsByLastActiveFunc func(limit int) ([]*domain.Executor, error)
-	SaveFunc func(e *domain.Executor) (int64, error)
-	UpdateLastActiveFunc func(id int64, ts time.Time) error
+	SaveFunc                     func(e *domain.Executor) (int64, error)
+	UpdateLastActiveFunc         func(id int64, ts time.Time) error
 }
 
 func (m *MockExecutorRepo) Save(e *domain.Executor) (int64, error) {
 	if m.SaveFunc != nil {
 		return m.SaveFunc(e)
 	}
-	return 1, nil 
+	return 1, nil
 }
-func (m *MockExecutorRepo) UpdateLastActive(id int64, ts time.Time) error { 
+func (m *MockExecutorRepo) UpdateLastActive(id int64, ts time.Time) error {
 	if m.UpdateLastActiveFunc != nil {
 		return m.UpdateLastActiveFunc(id, ts)
 	}
-	return nil 
+	return nil
 }
 func (m *MockExecutorRepo) GetExecutorsByLastActive(limit int) ([]*domain.Executor, error) {
 	if m.GetExecutorsByLastActiveFunc != nil {

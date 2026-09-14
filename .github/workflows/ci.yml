@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::these files are not gofmt'd:"
+            echo "$unformatted"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Verify go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: Build release binary
+        run: go build -o gopher-flow ./cmd/gopherflow
+
+      # GopherFlow ships a pure-Go SQLite driver so the container needs no
+      # special privileges. A cgo dependency creeping back in would silently
+      # reintroduce that requirement, so fail the build if it does.
+      - name: Assert the binary is statically linked
+        run: |
+          file gopher-flow
+          if ! file gopher-flow | grep -q "statically linked"; then
+            echo "::error::binary is not statically linked - a cgo dependency was reintroduced"
+            exit 1
+          fi
+
+      - name: Assert no cgo SQLite driver is linked in
+        run: |
+          if go list -deps ./cmd/gopherflow | grep -q "mattn/go-sqlite3"; then
+            echo "::error::github.com/mattn/go-sqlite3 is linked in - use modernc.org/sqlite"
+            exit 1
+          fi
+
+      # Runs unit tests plus the integration suites, which start real MySQL and
+      # Postgres via testcontainers against the Docker daemon on the runner.
+      - name: Test
+        run: go test -timeout 20m ./...
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.multistage
+          push: false
+          load: true
+          tags: gopherflow:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The image must run under Docker's default seccomp profile. Before
+      # v1.9.0 the cgo SQLite driver required --security-opt seccomp=unconfined.
+      - name: Smoke test under the default seccomp profile
+        run: |
+          mkdir -p "$RUNNER_TEMP/gflow-data"
+          docker run -d --name gflow-ci -p 8080:8080 \
+            -e GFLOW_DATABASE_TYPE=SQLLITE \
+            -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
+            -v "$RUNNER_TEMP/gflow-data:/data" \
+            gopherflow:ci
+
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://localhost:8080/ 2>/dev/null; then
+              echo "console responded after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)
+          echo "HTTP status: $status"
+
+          docker logs gflow-ci
+
+          if [ "$status" != "200" ] && [ "$status" != "303" ]; then
+            echo "::error::console did not come up (HTTP $status)"
+            docker rm -f gflow-ci
+            exit 1
+          fi
+
+          if docker logs gflow-ci 2>&1 | grep -qiE "seccomp|operation not permitted|database is locked"; then
+            echo "::error::container hit a seccomp or SQLite locking error"
+            docker rm -f gflow-ci
+            exit 1
+          fi
+
+          docker rm -f gflow-ci

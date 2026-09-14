@@ -69,12 +69,12 @@ func TestParentChildWorkflows(t *testing.T) {
 				StateVars:        sql.NullString{String: "", Valid: false},
 				ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
 			}
-			
+
 			childID, err := wfRepo.Save(childWf)
 			if err != nil {
 				t.Fatalf("Failed to save child workflow: %v", err)
 			}
-			
+
 			// Get the saved child workflow
 			childWf, err = wfRepo.FindByID(childID)
 
@@ -149,7 +149,7 @@ func TestParentChildWorkflows(t *testing.T) {
 					StateVars:        sql.NullString{String: "", Valid: false},
 					ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
 				}
-				
+
 				_, err := wfRepo.Save(childWf)
 
 				if err != nil {
@@ -238,7 +238,7 @@ func TestParentChildWorkflows(t *testing.T) {
 				StateVars:        sql.NullString{String: "", Valid: false},
 				ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
 			}
-			
+
 			_, err = wfRepo.Save(childWf)
 
 			if err != nil {

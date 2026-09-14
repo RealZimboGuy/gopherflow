@@ -68,12 +68,12 @@ func SetupPostgresTestInstance(ctx context.Context) (testcontainers.Container, s
 
 	os.Setenv("GFLOW_DATABASE_TYPE", "POSTGRES")
 	os.Setenv("GFLOW_DATABASE_URL", dsn)
-	
+
 	// Run migrations directly
 	if err := runMigrationsFromEmbed("postgres", dsn); err != nil {
 		slog.Error("DB migration failed", "error", err)
 	}
-	
+
 	return container, dsn
 }
 

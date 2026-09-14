@@ -25,7 +25,7 @@ func TestParentChildWorkflowRepository(t *testing.T) {
 			t.Fatalf("Failed to open database: %v", err)
 		}
 		defer db.Close()
-	
+
 		// Execute migrations directly since we're not using the full app setup
 		// This ensures the tables exist before running the tests
 		_, err = db.Exec(`
@@ -95,12 +95,12 @@ func TestParentChildWorkflowRepository(t *testing.T) {
 				StateVars:        sql.NullString{String: "", Valid: false},
 				ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
 			}
-			
+
 			childID, err := wfRepo.Save(childWf)
 			if err != nil {
 				t.Fatalf("Failed to save child workflow: %v", err)
 			}
-			
+
 			// Get the saved child workflow
 			childWf, err = wfRepo.FindByID(childID)
 
@@ -170,7 +170,7 @@ func TestParentChildWorkflowRepository(t *testing.T) {
 					StateVars:        sql.NullString{String: "", Valid: false},
 					ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
 				}
-				
+
 				_, err := wfRepo.Save(childWf)
 
 				if err != nil {
@@ -259,7 +259,7 @@ func TestParentChildWorkflowRepository(t *testing.T) {
 				StateVars:        sql.NullString{String: "", Valid: false},
 				ParentWorkflowID: sql.NullInt64{Int64: parentID, Valid: true},
 			}
-			
+
 			_, err = wfRepo.Save(childWf)
 
 			if err != nil {

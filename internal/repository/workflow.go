@@ -116,7 +116,6 @@ func (r *WorkflowRepository) GetChildrenByParentID(parentID int64, onlyActive bo
 	return &workflows, nil
 }
 
-
 func (r *WorkflowRepository) FindByID(id int64) (*domain.Workflow, error) {
 	query := `
 		SELECT ` + ALL_COLUMNS + `
@@ -146,17 +145,13 @@ func (r *WorkflowRepository) FindByID(id int64) (*domain.Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
-	// If SQLite, convert all timestamps to local
-	if config.GetSystemSettingString(config.DATABASE_TYPE) == config.DATABASE_TYPE_SQLLITE {
-		wf.Created = wf.Created
-		wf.Modified = wf.Modified
-		wf.NextActivation = (wf.NextActivation)
-		wf.Started = (wf.Started)
-	}
 	return &wf, nil
 }
 
-// helper to force time.Time to local
+// helper to force time.Time to local.
+//
+// Currently unused: timestamps are returned as stored (UTC). Wire this in if
+// callers should receive local times instead.
 func toLocalSqlTime(t sql.NullTime) sql.NullTime {
 	if !t.Valid {
 		return sql.NullTime{}

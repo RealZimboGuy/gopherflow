@@ -105,8 +105,7 @@ func (wm *WorkflowManager) StartEngine(ctx context.Context, pollInterval time.Du
 	slog.Info("Starting workflow engine", "workers", config.GetSystemSettingInteger(config.ENGINE_EXECUTOR_SIZE), "queue_size", queueSize)
 	for i := 0; i < config.GetSystemSettingInteger(config.ENGINE_EXECUTOR_SIZE); i++ {
 		//create a new context for each worker
-		workerContext, _ := context.WithCancel(ctx)
-		workerContext = context.WithValue(ctx, "worker_id", i)
+		workerContext := context.WithValue(ctx, "worker_id", i)
 		go Worker(workerContext, i, wm.executorID, wm.WorkflowRepo, wm.WorkflowActionRepo, workflowQueue)
 	}
 

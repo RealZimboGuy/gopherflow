@@ -60,12 +60,12 @@ func SetupMySQLTestInstance(ctx context.Context) (testcontainers.Container, stri
 	dsn := "mysql://test:test@tcp(localhost:" + port.Port() + ")/testdb?parseTime=true"
 	os.Setenv("GFLOW_DATABASE_TYPE", "MYSQL")
 	os.Setenv("GFLOW_DATABASE_URL", dsn)
-	
+
 	// Run migrations directly
 	if err := runMigrationsFromEmbed("mysql", dsn); err != nil {
 		slog.Error("DB migration failed", "error", err)
 	}
-	
+
 	return container, dsn
 }
 
