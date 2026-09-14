@@ -5,6 +5,9 @@ import (
 	"fmt"
 )
 
+// SaveStructToStateVars marshals data to JSON and stores it in stateVars under
+// key, so a struct can be carried between workflow states. It returns an error
+// if the value cannot be marshalled, leaving stateVars unchanged.
 func SaveStructToStateVars[T any](stateVars map[string]string, key string, data T) error {
 	bytes, err := json.Marshal(data)
 	if err != nil {
@@ -14,6 +17,8 @@ func SaveStructToStateVars[T any](stateVars map[string]string, key string, data 
 	return nil
 }
 
+// LoadStructFromStateVars reads the JSON value stored at key and unmarshals it
+// into a T. It returns an error if the key is absent or the value does not parse.
 func LoadStructFromStateVars[T any](stateVars map[string]string, key string) (*T, error) {
 	data, ok := stateVars[key]
 	if !ok {

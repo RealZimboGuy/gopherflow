@@ -49,6 +49,15 @@ type logHandler struct {
 	Clock core.Clock
 }
 
+// Setup wires the engine, repositories, REST API and web console together and
+// returns the App ready to Run. The database is chosen by GFLOW_DATABASE_TYPE
+// and its schema migrations are applied automatically.
+//
+// registry maps each workflow type name to a factory returning a fresh
+// instance; the engine calls the factory once per execution, so instances are
+// never shared between workflows.
+//
+// Setup panics if the database configuration is missing or invalid.
 func Setup(registry map[string]func() core.Workflow) *App {
 	return SetupWithClock(registry, core.NewRealClock())
 }
@@ -135,6 +144,8 @@ func (a *App) Run(ctx context.Context) error {
 	return nil
 }
 
+// Shutdown closes the database connection and resets the default HTTP mux. It
+// is called automatically when the context passed to Run is cancelled.
 func (a *App) Shutdown() {
 	//remove any global setups to clean up resources
 	//WorkflowRegistry = make(map[string]func() core.Workflow)
@@ -253,6 +264,9 @@ func runMigrationsFromEmbed(migrationsPath string, dbURL string) error {
 	return nil
 }
 
+// SetupLoggerWithClock installs a slog default logger that timestamps records
+// using the given Clock, which lets tests with a fake clock produce log lines
+// consistent with the time the engine believes it is.
 func SetupLoggerWithClock(logLevel slog.Leveler, clock core.Clock) {
 	w := os.Stderr
 	baseHandler := tint.NewHandler(w, &tint.Options{
@@ -265,10 +279,16 @@ func SetupLoggerWithClock(logLevel slog.Leveler, clock core.Clock) {
 	logger := slog.New(&logHandler{Handler: baseHandler, Clock: clock})
 	slog.SetDefault(logger)
 }
+
+// SetupLogger installs a slog default logger at the given level. Call it before
+// Setup, or install your own logger instead.
 func SetupLogger(logLevel slog.Leveler) {
 	SetupLoggerWithClock(logLevel, core.NewRealClock())
 }
 
+// Handle adds a Cloud Logging compatible "severity" field, replaces the record
+// timestamp with the handler's clock, and copies the executor id and username
+// from the context onto the record when they are present.
 func (h *logHandler) Handle(ctx context.Context, r slog.Record) error {
 	// Map slog level to Cloud severity, useful for google cloud run
 	// Clone so we don't mutate the original record (handlers may share it).

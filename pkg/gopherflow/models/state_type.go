@@ -1,5 +1,8 @@
 package models
 
+// StateType classifies a workflow state. The engine uses it to decide which
+// states start a workflow and which terminate it; the console uses it to colour
+// the generated flow chart.
 type StateType string
 
 const (

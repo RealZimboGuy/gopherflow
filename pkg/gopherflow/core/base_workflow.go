@@ -29,6 +29,10 @@ func (b *BaseWorkflow) Setup(wf *domain.Workflow) {
 		}
 	}
 }
+
+// SetChildWorkflows records the child workflows spawned by this workflow. The
+// engine calls this before a state method runs so GetChildWorkflows can report
+// their current status.
 func (b *BaseWorkflow) SetChildWorkflows(children []domain.Workflow) {
 	b.ChildWorkflows = children
 }

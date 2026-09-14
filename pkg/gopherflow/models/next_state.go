@@ -11,6 +11,9 @@ type ChildWorkflowRequest struct {
 	StateVariables map[string]string // Initial state variables for the child workflow
 }
 
+// NextState is what a workflow state method returns: the state to move to, and
+// optionally when to run it, any child workflows to spawn, and whether to wake
+// the parent workflow.
 type NextState struct {
 	Name                string                 // Name of the state
 	ActionLog           string                 // Additional information about the state

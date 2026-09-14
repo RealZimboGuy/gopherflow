@@ -4,6 +4,9 @@ import (
 	"database/sql"
 )
 
+// User is a console or API account. Password holds a bcrypt hash, ApiKey
+// authenticates REST requests, and SessionID with SessionExpiry backs the
+// console's cookie session.
 type User struct {
 	ID            int64          `json:"id"`
 	Username      string         `json:"username"`
