@@ -1,18 +1,15 @@
 package postgres
 
 import (
-	"fmt"
 	"log/slog"
-	"net/http"
 	"testing"
 	"time"
 
-	"github.com/RealZimboGuy/gopherflow/internal/util"
 	"github.com/RealZimboGuy/gopherflow/internal/workflows"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
-	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
 	"github.com/RealZimboGuy/gopherflow/test/integration"
+	"github.com/RealZimboGuy/gopherflow/test/integration/common"
 )
 
 func TestStartupAppAndGetExecutor(t *testing.T) {
@@ -40,28 +37,9 @@ func TestStartupAppAndGetExecutor(t *testing.T) {
 		}()
 		clock.Add(time.Duration(8) * time.Minute)
 
-		url := fmt.Sprintf("http://localhost:%d/api/executors", port)
-
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", "b5f0e8c4-daa6-465c-bded-50ca22b798b2")
-
-		// Create client with timeout
-		client := &http.Client{Timeout: 10 * time.Second}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("Failed to GET /api/executors: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected 200 OK, got %d", resp.StatusCode)
-		}
-		executors, _ := util.DecodeJSONBodyResponse[[]domain.Executor](resp)
+		// The engine registers its executor asynchronously after the HTTP
+		// server comes up, so poll rather than racing a single request.
+		executors := common.WaitForExecutors(t, port, 30*time.Second)
 		// ---- Assertions ----
 		if len(executors) != 1 {
 			t.Errorf("Expected at least one executor, got none")

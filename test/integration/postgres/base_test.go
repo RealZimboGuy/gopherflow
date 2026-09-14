@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/RealZimboGuy/gopherflow/internal/migrations"
 	"github.com/golang-migrate/migrate/v4"
@@ -43,7 +44,12 @@ func SetupPostgresTestInstance(ctx context.Context) (testcontainers.Container, s
 			"POSTGRES_USER":     "test",
 			"POSTGRES_DB":       "testdb",
 		},
-		WaitingFor: wait.ForListeningPort("5432/tcp"),
+		// The postgres image also boots a temporary server during init, so wait
+		// for the second readiness line rather than just the port.
+		WaitingFor: wait.ForAll(
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(3*time.Minute),
+			wait.ForListeningPort("5432/tcp"),
+		).WithDeadline(4 * time.Minute),
 	}
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,

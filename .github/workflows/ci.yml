@@ -77,8 +77,12 @@ jobs:
 
       # Runs unit tests plus the integration suites, which start real MySQL and
       # Postgres via testcontainers against the Docker daemon on the runner.
+      #
+      # -p 1 runs one package at a time. Without it the MySQL, Postgres and
+      # SQLite suites each start containers and a full engine concurrently,
+      # which starves the runner and produces failures that look like flakes.
       - name: Test
-        run: go test -timeout 20m ./...
+        run: go test -p 1 -timeout 20m ./...
 
   docker:
     name: Docker image
@@ -102,38 +106,76 @@ jobs:
 
       # The image must run under Docker's default seccomp profile. Before
       # v1.9.0 the cgo SQLite driver required --security-opt seccomp=unconfined.
+      #
+      # Uses a named volume so the mount inherits the image's nonroot ownership.
+      # A host bind mount is covered separately below.
       - name: Smoke test under the default seccomp profile
         run: |
-          mkdir -p "$RUNNER_TEMP/gflow-data"
           docker run -d --name gflow-ci -p 8080:8080 \
             -e GFLOW_DATABASE_TYPE=SQLLITE \
             -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
-            -v "$RUNNER_TEMP/gflow-data:/data" \
+            -v gflow-ci-data:/data \
             gopherflow:ci
 
-          for i in $(seq 1 30); do
-            if curl -fsS -o /dev/null http://localhost:8080/ 2>/dev/null; then
-              echo "console responded after ${i}s"
+          status="000"
+          for i in $(seq 1 60); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/ || echo "000")
+            if [ "$status" = "200" ] || [ "$status" = "303" ]; then
+              echo "console responded after ${i}s (HTTP $status)"
               break
             fi
             sleep 1
           done
 
-          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)
-          echo "HTTP status: $status"
+          echo "--- container logs ---"
+          docker logs gflow-ci 2>&1 || true
+          echo "--- end logs ---"
 
-          docker logs gflow-ci
+          logs=$(docker logs gflow-ci 2>&1 || true)
+          docker rm -f gflow-ci >/dev/null 2>&1 || true
+          docker volume rm gflow-ci-data >/dev/null 2>&1 || true
 
           if [ "$status" != "200" ] && [ "$status" != "303" ]; then
             echo "::error::console did not come up (HTTP $status)"
-            docker rm -f gflow-ci
             exit 1
           fi
 
-          if docker logs gflow-ci 2>&1 | grep -qiE "seccomp|operation not permitted|database is locked"; then
+          if echo "$logs" | grep -qiE "seccomp|operation not permitted|database is locked"; then
             echo "::error::container hit a seccomp or SQLite locking error"
-            docker rm -f gflow-ci
             exit 1
           fi
 
-          docker rm -f gflow-ci
+          echo "image runs correctly under the default seccomp profile"
+
+      # Diagnostic only. The README documents a host bind mount, which on Linux
+      # gives the container a directory owned by the host user while the image
+      # runs as nonroot (uid 65532). This step reports whether that works
+      # without failing the build.
+      - name: Diagnostic - host bind mount as documented in the README
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/gflow-bind"
+          echo "host dir owner: $(stat -c '%u:%g %a' "$RUNNER_TEMP/gflow-bind")"
+
+          docker run -d --name gflow-bind -p 8081:8080 \
+            -e GFLOW_DATABASE_TYPE=SQLLITE \
+            -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
+            -v "$RUNNER_TEMP/gflow-bind:/data" \
+            gopherflow:ci
+
+          status="000"
+          for i in $(seq 1 20); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/ || echo "000")
+            if [ "$status" = "200" ] || [ "$status" = "303" ]; then break; fi
+            sleep 1
+          done
+
+          echo "bind-mount HTTP status: $status"
+          echo "--- container logs ---"
+          docker logs gflow-bind 2>&1 || true
+          echo "--- end logs ---"
+          docker rm -f gflow-bind >/dev/null 2>&1 || true
+
+          if [ "$status" != "200" ] && [ "$status" != "303" ]; then
+            echo "::warning::the README bind-mount command does not work on Linux as written"
+          fi

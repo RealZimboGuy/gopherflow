@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/RealZimboGuy/gopherflow/internal/migrations"
 	"github.com/golang-migrate/migrate/v4"
@@ -43,7 +44,14 @@ func SetupMySQLTestInstance(ctx context.Context) (testcontainers.Container, stri
 			"MYSQL_PASSWORD":      "test",
 			"MYSQL_DATABASE":      "testdb",
 		},
-		WaitingFor: wait.ForListeningPort("3306/tcp"),
+		// The mysql image boots a temporary server for initialisation, shuts it
+		// down, then starts the real one. Waiting only for the port can connect
+		// to the temporary server and fail with "Server shutdown in progress",
+		// so wait for the second "ready for connections" log line too.
+		WaitingFor: wait.ForAll(
+			wait.ForLog("ready for connections").WithOccurrence(2).WithStartupTimeout(3*time.Minute),
+			wait.ForListeningPort("3306/tcp"),
+		).WithDeadline(4 * time.Minute),
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
