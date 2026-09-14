@@ -134,12 +134,11 @@ jobs:
 
           echo "image runs correctly under the default seccomp profile"
 
-      # Diagnostic only. The README documents a host bind mount, which on Linux
-      # gives the container a directory owned by the host user while the image
-      # runs as nonroot (uid 65532). This step reports whether that works
-      # without failing the build.
-      - name: Diagnostic - host bind mount as documented in the README
-        continue-on-error: true
+      # The README also documents a host bind mount with --user. A bind mount
+      # keeps the host's ownership rather than the image's, so without --user
+      # the nonroot user cannot create the database and the container dies.
+      # This runs the documented command verbatim so it cannot regress.
+      - name: Smoke test the documented host bind mount
         run: |
           mkdir -p "$RUNNER_TEMP/gflow-bind"
           echo "host dir owner: $(stat -c '%u:%g %a' "$RUNNER_TEMP/gflow-bind")"
@@ -148,21 +147,31 @@ jobs:
             -e GFLOW_DATABASE_TYPE=SQLLITE \
             -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
             -v "$RUNNER_TEMP/gflow-bind:/data" \
+            --user "$(id -u):$(id -g)" \
             gopherflow:ci
 
           status="000"
-          for i in $(seq 1 20); do
+          for i in $(seq 1 60); do
             status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/ || echo "000")
-            if [ "$status" = "200" ] || [ "$status" = "303" ]; then break; fi
+            if [ "$status" = "200" ] || [ "$status" = "303" ]; then
+              echo "console responded after ${i}s (HTTP $status)"
+              break
+            fi
             sleep 1
           done
 
-          echo "bind-mount HTTP status: $status"
           echo "--- container logs ---"
           docker logs gflow-bind 2>&1 || true
           echo "--- end logs ---"
           docker rm -f gflow-bind >/dev/null 2>&1 || true
 
           if [ "$status" != "200" ] && [ "$status" != "303" ]; then
-            echo "::warning::the README bind-mount command does not work on Linux as written"
+            echo "::error::the documented bind-mount command does not work (HTTP $status)"
+            exit 1
           fi
+
+          if [ ! -f "$RUNNER_TEMP/gflow-bind/gflow.db" ]; then
+            echo "::error::the database file was not created on the host bind mount"
+            exit 1
+          fi
+          echo "bind mount works and the database landed on the host"

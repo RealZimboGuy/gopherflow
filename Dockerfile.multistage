@@ -1,7 +1,11 @@
 #Run with
 #  docker build --platform linux/amd64 -t juliangpurse/gopherflow:1.9.0 -f Dockerfile.multistage . ; docker push juliangpurse/gopherflow:1.9.0
 
- #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v "$(pwd):/data" juliangpurse/gopherflow:1.9.0
+ #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v gflow-data:/data juliangpurse/gopherflow:1.9.0
+ #
+ # A named volume inherits /data's ownership from the image. A host bind mount
+ # does not: it keeps the host's ownership, which the nonroot user below cannot
+ # write to. Use --user $(id -u):$(id -g) when bind mounting a host directory.
 
 # Build the application from source
 FROM golang:1.26 AS build-stage

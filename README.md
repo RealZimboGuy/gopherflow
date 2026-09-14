@@ -68,13 +68,27 @@ This starts the demo application with a SQLite database, there are two workflows
         docker run -p 8080:8080 \
         -e GFLOW_DATABASE_TYPE=SQLLITE \
         -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
-        -v "$(pwd):/data" \
+        -v gflow-data:/data \
         juliangpurse/gopherflow:1.9.0
 
 Access the web console at http://localhost:8080/
 
     Username : admin
     Password : admin
+
+The database lives in the named volume `gflow-data`, which survives `docker rm`
+and can be removed with `docker volume rm gflow-data`.
+
+To keep the database file in the current directory instead, bind mount it and
+run as yourself. The image runs as a non-root user, so a bind mount owned by
+your account is not writable by the container unless you say who to run as:
+
+        docker run -p 8080:8080 \
+        -e GFLOW_DATABASE_TYPE=SQLLITE \
+        -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
+        -v "$(pwd):/data" \
+        --user $(id -u):$(id -g) \
+        juliangpurse/gopherflow:1.9.0
 
 ## Web Console
 
