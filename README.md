@@ -148,134 +148,150 @@ type Workflow interface {
 ```
 ### Here is the example for the GetIpWorkflow
 
-```go
-import (
-    "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
-    domain "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
-    models "github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
+This lives in your own module — say `workflows/getip_workflow.go`. Workflows are
+ordinary Go types in your code; GopherFlow never needs them to live anywhere
+particular.
 
-    "io"
-    "log/slog"
-    "net/http"
-    "time"
+```go
+package workflows
+
+import (
+	"context"
+	"io"
+	"log/slog"
+	"net/http"
+	"time"
+
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/domain"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 )
 
-// Define a named string type
-var StateStart string = "Start"
-var StateGetIpData string = "StateGetIpData"
+// State names are yours to choose. They only need to agree between
+// StateTransitions and GetAllStates.
+var (
+	StateStart     = "Start"
+	StateGetIpData = "StateGetIpData"
+	StateFinish    = "Finish"
+)
 
 const VAR_IP = "ip"
 
 type GetIpWorkflow struct {
-core.BaseWorkflow
+	core.BaseWorkflow
 }
 
 func (m *GetIpWorkflow) Setup(wf *domain.Workflow) {
-    m.BaseWorkflow.Setup(wf)
+	m.BaseWorkflow.Setup(wf)
 }
+
 func (m *GetIpWorkflow) GetWorkflowData() *domain.Workflow {
-    return m.WorkflowState
+	return m.WorkflowState
 }
+
 func (m *GetIpWorkflow) GetStateVariables() map[string]string {
-    return m.StateVariables
+	return m.StateVariables
 }
+
 func (m *GetIpWorkflow) InitialState() string {
-    return StateStart
+	return StateStart
 }
 
 func (m *GetIpWorkflow) Description() string {
-    return "This is a Demo Workflow showing how it can be used"
+	return "Fetches the public IP address and stores it in a state variable"
 }
 
 func (m *GetIpWorkflow) GetRetryConfig() models.RetryConfig {
-    return models.RetryConfig{
-        MaxRetryCount:    10,
-        RetryIntervalMin: time.Second * 10,
-        RetryIntervalMax: time.Minute * 60,
-    }
+	return models.RetryConfig{
+		MaxRetryCount:    10,
+		RetryIntervalMin: time.Second * 10,
+		RetryIntervalMax: time.Minute * 60,
+	}
 }
 
 func (m *GetIpWorkflow) StateTransitions() map[string][]string {
-    return map[string][]string{
-        StateStart:     []string{StateGetIpData}, // Init -> StateGetIpData
-        StateGetIpData: []string{StateFinish},    // StateGetIpData -> finish
-    }
+	return map[string][]string{
+		StateStart:     {StateGetIpData},
+		StateGetIpData: {StateFinish},
+	}
 }
+
 func (m *GetIpWorkflow) GetAllStates() []models.WorkflowState {
-    states := []models.WorkflowState{
-        {Name: StateStart, StateType: models.StateStart},
-        {Name: StateGetIpData, StateType: models.StateNormal},
-        {Name: StateFinish, StateType: models.StateEnd},
-    }
-    return states
+	return []models.WorkflowState{
+		{Name: StateStart, StateType: models.StateStart},
+		{Name: StateGetIpData, StateType: models.StateNormal},
+		{Name: StateFinish, StateType: models.StateEnd},
+	}
 }
 
-// Each method returns the next state
+// Each state is a method named after the state, returning the next state.
 func (m *GetIpWorkflow) Start(ctx context.Context) (*models.NextState, error) {
+	// Use the InfoContext form: the engine puts worker and workflow ids into
+	// the context and the logger writes them out with each line.
+	slog.InfoContext(ctx, "Starting workflow")
 
-    //use the Context slog because there are workerids and other fields in the context that get written by the logger
-    slog.InfoContext(ctx,"Starting workflow")
-
-    return &models.NextState{
-        Name:      StateGetIpData,
-        ActionLog: "using ifconfig.io to return the public IP address",
-    }, nil
+	return &models.NextState{
+		Name:      StateGetIpData,
+		ActionLog: "using ifconfig.io to return the public IP address",
+	}, nil
 }
 
 func (m *GetIpWorkflow) StateGetIpData(ctx context.Context) (*models.NextState, error) {
-    resp, err := http.Get("http://ifconfig.io")
-    if err != nil {
-        return nil, err
-    }
-    defer resp.Body.Close()
+	resp, err := http.Get("http://ifconfig.io")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
 
-    ipBytes, err := io.ReadAll(resp.Body)
-    if err != nil {
-        return nil, err
-    }
-    ip := string(ipBytes)
-    m.StateVariables[VAR_IP] = ip
+	ipBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	m.StateVariables[VAR_IP] = string(ipBytes)
 
-    return &models.NextState{
-        Name: StateFinish,
-    }, nil
+	return &models.NextState{
+		Name: StateFinish,
+	}, nil
 }
 ```
 
 ### Main function
+
+Register each workflow type by name and start the engine. Replace
+`example.com/myapp` with your own module path.
+
 ```go
+package main
+
 import (
-    "context"
-    "log/slog"
-    
-    "github.com/RealZimboGuy/gopherflow/internal/workflows"
-    "github.com/RealZimboGuy/gopherflow/pkg/gopherflow"
+	"context"
+	"log/slog"
+
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow"
+	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
+
+	"example.com/myapp/workflows"
 )
-    
+
 func main() {
-    //you may do your own logger setup here or use this default one with slog
-    ctx := context.Background()
-    
-    gopherflow.SetupLogger(slog.LevelInfo)
-    
-    workflowRegistry := map[string]func() core.Workflow{
-        "DemoWorkflow": func() core.Workflow {
-            return &workflows.DemoWorkflow{}
-        },
-        "GetIpWorkflow": func() core.Workflow {
-            // You can inject dependencies here
-            return &workflows.GetIpWorkflow{
-                // HTTPClient: httpClient,
-                // MyService: myService,
-            }
-        },
-    }
-    //uses the defaul ServeMux
-    app := gopherflow.Setup(workflowRegistry)
-    
-    if err := app.Run(ctx); err != nil {
-        slog.Error("Engine exited with error", "error", err)
-    }
+	ctx := context.Background()
+
+	// Use your own logger setup, or this default one built on slog.
+	gopherflow.SetupLogger(slog.LevelInfo)
+
+	// Register every workflow type by name.
+	workflowRegistry := map[string]func() core.Workflow{
+		"GetIpWorkflow": func() core.Workflow {
+			// Inject your own dependencies here.
+			return &workflows.GetIpWorkflow{}
+		},
+	}
+
+	app := gopherflow.Setup(workflowRegistry)
+
+	if err := app.Run(ctx); err != nil {
+		slog.Error("Engine exited with error", "error", err)
+	}
 }
 ```
 
