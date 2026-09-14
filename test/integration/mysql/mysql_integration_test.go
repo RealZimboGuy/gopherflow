@@ -35,6 +35,7 @@ func TestStartupAppAndGetExecutor(t *testing.T) {
 				slog.Error("Engine exited with error", "error", err)
 			}
 		}()
+		common.WaitForHTTP(t, port)
 
 		//wait 3 seconds
 		time.Sleep(3 * time.Second)

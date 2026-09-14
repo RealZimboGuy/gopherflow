@@ -15,6 +15,7 @@ import (
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/core"
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 	"github.com/RealZimboGuy/gopherflow/test/integration"
+	"github.com/RealZimboGuy/gopherflow/test/integration/common"
 )
 
 func TestStartupAppAndCreateWorkflow(t *testing.T) {
@@ -40,6 +41,7 @@ func TestStartupAppAndCreateWorkflow(t *testing.T) {
 				slog.Error("Engine exited with error", "error", err)
 			}
 		}()
+		common.WaitForHTTP(t, port)
 
 		clock.Add(time.Duration(8) * time.Minute)
 

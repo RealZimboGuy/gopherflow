@@ -55,6 +55,7 @@ func TestStartupAppAndRepairWorkflow(t *testing.T) {
 				slog.Error("Engine exited with error", "error", err)
 			}
 		}()
+		common.WaitForHTTP(t, port)
 
 		//clock.Add(time.Duration(8) * time.Minute)
 
@@ -126,6 +127,7 @@ func TestStartupAppAndRepairWorkflow(t *testing.T) {
 				slog.Error("Engine exited with error", "error", err)
 			}
 		}()
+		common.WaitForHTTP(t, port)
 
 		// Wait for the HTTP server to be ready
 		time.Sleep(500 * time.Millisecond)

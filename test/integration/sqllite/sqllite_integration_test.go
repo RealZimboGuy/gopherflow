@@ -38,6 +38,7 @@ func TestStartupAppAndGetExecutor(t *testing.T) {
 				slog.Error("Engine exited with error", "error", err)
 			}
 		}()
+		common.WaitForHTTP(t, port)
 
 		// The engine registers its executor asynchronously after the HTTP
 		// server comes up, so poll rather than racing a single request.
