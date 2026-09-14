@@ -22,7 +22,8 @@ func NewWorkflowDefinitionRepository(db *sql.DB, clock core.Clock) *WorkflowDefi
 func (r *WorkflowDefinitionRepository) Save(def *domain.WorkflowDefinition) error {
 	query := ""
 	db := config.GetSystemSettingString(config.DATABASE_TYPE)
-	if db == config.DATABASE_TYPE_POSTGRES || db == config.DATABASE_TYPE_SQLLITE {
+	switch db {
+	case config.DATABASE_TYPE_POSTGRES, config.DATABASE_TYPE_SQLLITE:
 		query = `
 		INSERT INTO workflow_definitions (name, description, created, updated, flow_chart)
 		VALUES (` + placeholder(1) + `, ` + placeholder(2) + `, ` + placeholder(3) + `, ` + placeholder(4) + `, ` + placeholder(5) + `)
@@ -31,7 +32,7 @@ func (r *WorkflowDefinitionRepository) Save(def *domain.WorkflowDefinition) erro
 			updated = EXCLUDED.updated,
 			flow_chart = EXCLUDED.flow_chart
 	`
-	} else if db == config.DATABASE_TYPE_MYSQL {
+	case config.DATABASE_TYPE_MYSQL:
 		query = `
 		INSERT INTO workflow_definitions (name, description, created, updated, flow_chart)
 		VALUES (` + placeholder(1) + `, ` + placeholder(2) + `, ` + placeholder(3) + `, ` + placeholder(4) + `, ` + placeholder(5) + `)
@@ -39,7 +40,7 @@ func (r *WorkflowDefinitionRepository) Save(def *domain.WorkflowDefinition) erro
 			updated = VALUES(updated),
 			flow_chart = VALUES(flow_chart)
 	`
-	} else {
+	default:
 		panic("Unknown database type trying to save workflow definition")
 	}
 

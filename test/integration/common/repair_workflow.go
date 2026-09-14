@@ -43,8 +43,8 @@ func (m *RepairWorkflow) GetRetryConfig() models.RetryConfig {
 
 func (m *RepairWorkflow) StateTransitions() map[string][]string {
 	return map[string][]string{
-		StateInit:      []string{StateGetIpData}, // Init -> StateGetIpData
-		StateGetIpData: []string{StateFinish},    // StateGetIpData -> finish
+		StateInit:      {StateGetIpData}, // Init -> StateGetIpData
+		StateGetIpData: {StateFinish},    // StateGetIpData -> finish
 	}
 }
 func (m *RepairWorkflow) GetAllStates() []models.WorkflowState {

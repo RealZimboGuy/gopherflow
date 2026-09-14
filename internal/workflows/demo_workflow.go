@@ -59,9 +59,9 @@ func (m *DemoWorkflow) GetRetryConfig() models.RetryConfig {
 
 func (m *DemoWorkflow) StateTransitions() map[string][]string {
 	return map[string][]string{
-		StateInit:    []string{StateReview},                     // Init -> review
-		StateReview:  []string{StateApprove, StateApproveError}, // review -> approve OR approve error
-		StateApprove: []string{StateFinish},                     // approve -> finish
+		StateInit:    {StateReview},                     // Init -> review
+		StateReview:  {StateApprove, StateApproveError}, // review -> approve OR approve error
+		StateApprove: {StateFinish},                     // approve -> finish
 	}
 }
 func (m *DemoWorkflow) GetAllStates() []models.WorkflowState {
@@ -85,7 +85,9 @@ func (m *DemoWorkflow) Init(ctx context.Context) (*models.NextState, error) {
 		Name: "Julian",
 		Age:  33,
 	}
-	workflow_helpers.SaveStructToStateVars(m.StateVariables, "enrollment", enrollment)
+	if err := workflow_helpers.SaveStructToStateVars(m.StateVariables, "enrollment", enrollment); err != nil {
+		return nil, err
+	}
 
 	return &models.NextState{
 		Name:                StateReview,

@@ -148,21 +148,6 @@ func (r *WorkflowRepository) FindByID(id int64) (*domain.Workflow, error) {
 	return &wf, nil
 }
 
-// helper to force time.Time to local.
-//
-// Currently unused: timestamps are returned as stored (UTC). Wire this in if
-// callers should receive local times instead.
-func toLocalSqlTime(t sql.NullTime) sql.NullTime {
-	if !t.Valid {
-		return sql.NullTime{}
-	}
-	if t.Time.IsZero() {
-		return t
-	}
-	t.Time = t.Time.Local()
-	return t
-}
-
 func (r *WorkflowRepository) Save(wf *domain.Workflow) (int64, error) {
 	// Build dialect-aware placeholders
 	vals := []interface{}{wf.Status, wf.ExecutionCount, wf.RetryCount, formatDateInDatabase(wf.Created), formatDateInDatabase(wf.Modified), formatDateInDatabaseNull(wf.NextActivation), formatDateInDatabaseNull(wf.Started), wf.ExecutorID, wf.ExecutorGroup, wf.WorkflowType, wf.ExternalID, wf.BusinessKey, wf.State,
@@ -374,7 +359,8 @@ func (r *WorkflowRepository) UpdateNextActivationOffset(id int64, offset string)
 	if err != nil {
 		// try to parse as integer minutes from string like "5" or "5 minutes"
 		mins := 0
-		fmt.Sscanf(offset, "%d", &mins)
+		// A parse failure leaves mins at 0, which is the intended fallback.
+		_, _ = fmt.Sscanf(offset, "%d", &mins)
 		dur = time.Duration(mins) * time.Minute
 	}
 	next := time.Now().UTC().Add(dur)
@@ -478,7 +464,6 @@ func (r *WorkflowRepository) FindByExternalId(id string) (*domain.Workflow, erro
 }
 
 func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGroup string, limit int) (*[]domain.Workflow, error) {
-	var query string
 	//if supportsReturning() { // Postgres flavor using interval
 	//	query = `
 	//	SELECT ` + ALL_COLUMNS + `
@@ -496,7 +481,7 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 	//	`
 	//} else {
 	// Generic flavor without interval math: compare against parameterized cutoff times
-	query = `
+	query := `
 		SELECT ` + ALL_COLUMNS + `
 		FROM workflow
 		WHERE modified < ` + placeholder(1) + `
@@ -547,7 +532,8 @@ func (r *WorkflowRepository) FindStuckWorkflows(minutesRepair string, executorGr
 	//} else {
 	// minutesRepair is a string like "5" or "5 minutes"; extract leading integer minutes
 	mins := 0
-	fmt.Sscanf(minutesRepair, "%d", &mins)
+	// A parse failure leaves mins at 0, which is the intended fallback.
+	_, _ = fmt.Sscanf(minutesRepair, "%d", &mins)
 	cutoff := time.Now().UTC().Add(-time.Duration(mins) * time.Minute)
 	lastActiveCutoff := cutoff
 	rows, err := r.db.Query(query, cutoff, executorGroup, lastActiveCutoff, limit)

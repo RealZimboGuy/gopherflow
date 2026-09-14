@@ -19,8 +19,6 @@ func (b *BaseWorkflow) Setup(wf *domain.Workflow) {
 	b.WorkflowState = wf
 	if b.StateVariables == nil {
 		b.StateVariables = make(map[string]string)
-	} else {
-		// ensure we start from existing vars but don't nil panic
 	}
 	// if there are state vars then try parse them to have loaded in
 	if wf.StateVars.Valid && wf.StateVars.String != "" && wf.StateVars.String != "null" {

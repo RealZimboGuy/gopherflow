@@ -10,10 +10,10 @@ import (
 	"github.com/RealZimboGuy/gopherflow/pkg/gopherflow/models"
 )
 
-func GetWfAndExpectState(t *testing.T, port int, url string, wf models.CreateWorkflowResponse, req *http.Request, err error, client *http.Client, state string) {
-	url = fmt.Sprintf("http://localhost:%d/api/workflows/%d", port, wf.ID)
+func GetWfAndExpectState(t *testing.T, port int, wf models.CreateWorkflowResponse, client *http.Client, state string) {
+	url := fmt.Sprintf("http://localhost:%d/api/workflows/%d", port, wf.ID)
 
-	req, err = http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}

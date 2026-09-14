@@ -106,12 +106,12 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r WorkflowRepo, wa Workfl
 
 		// Call the method and get the next state
 		results := method.Call([]reflect.Value{reflect.ValueOf(ctx)})
-		if len(results) != 2 || !(results[0].Type().AssignableTo(reflect.TypeOf(models.NextState{})) || results[0].Type().AssignableTo(reflect.TypeOf(&models.NextState{}))) {
+		if len(results) != 2 || (!results[0].Type().AssignableTo(reflect.TypeOf(models.NextState{})) && !results[0].Type().AssignableTo(reflect.TypeOf(&models.NextState{}))) {
 			panic(fmt.Sprintf("method %s should return (NextState or *NextState, error)", currentState))
 		}
 
 		var ns *models.NextState
-		if results[0].Kind() == reflect.Ptr {
+		if results[0].Kind() == reflect.Pointer {
 			if val, ok := results[0].Interface().(*models.NextState); ok {
 				ns = val
 			}
@@ -205,7 +205,7 @@ func RunWorkflow(ctx context.Context, w core.Workflow, r WorkflowRepo, wa Workfl
 
 				// Convert state variables to JSON
 				stateVarsJSON := "{}"
-				if childReq.StateVariables != nil && len(childReq.StateVariables) > 0 {
+				if len(childReq.StateVariables) > 0 {
 					stateVarsBytes, err := json.Marshal(childReq.StateVariables)
 					if err != nil {
 						slog.ErrorContext(ctx, "Error marshaling child workflow state variables", "error", err)
@@ -336,7 +336,6 @@ func processStateExecutionError(ctx context.Context, w core.Workflow, r Workflow
 	}
 	_, _ = wa.Save(&domain.WorkflowAction{WorkflowID: w.GetWorkflowData().ID, ExecutorID: executorID, ExecutionCount: w.GetWorkflowData().ExecutionCount,
 		Type: "RETRY", Name: currentState, Text: fmt.Sprintf("Retry at  :%s", nextActivation), DateTime: time.Now()})
-	return
 }
 
 func compareAndSaveWorkflowStateVars(ctx context.Context, w core.Workflow, r WorkflowRepo, workerID string) bool {

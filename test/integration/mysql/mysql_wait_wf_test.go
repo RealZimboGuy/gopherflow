@@ -90,7 +90,7 @@ func TestStartupAppAndWaitWorkflow(t *testing.T) {
 		clock.Sleep(5 * time.Second)
 		slog.Info("Waiting finished")
 
-		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "IN_PROGRESS")
+		common.GetWfAndExpectState(t, port, wf, client, "IN_PROGRESS")
 
 		slog.Warn("advance clock by 15 minutes")
 		clock.Add(time.Duration(15) * time.Minute)
@@ -99,7 +99,7 @@ func TestStartupAppAndWaitWorkflow(t *testing.T) {
 		slog.Info("Waiting for workflow to complete")
 		clock.Sleep(5 * time.Second)
 
-		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "FINISHED")
+		common.GetWfAndExpectState(t, port, wf, client, "FINISHED")
 
 	})
 }

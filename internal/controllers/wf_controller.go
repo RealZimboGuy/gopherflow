@@ -106,7 +106,7 @@ func (c *WorkflowsController) handleCreateWorkflow(w http.ResponseWriter, r *htt
 		return
 	}
 
-	err, id := createWorkflow(r.Context(), c, req)
+	id, err := createWorkflow(r.Context(), c, req)
 
 	if err != nil {
 		slog.Error("Failed to save workflow", "error", err)
@@ -129,7 +129,7 @@ func validateCreateWorkflow(ctx context.Context, req models.CreateWorkflowReques
 	return nil
 }
 
-func createWorkflow(ctx context.Context, c *WorkflowsController, req models.CreateWorkflowRequest) (error, int64) {
+func createWorkflow(ctx context.Context, c *WorkflowsController, req models.CreateWorkflowRequest) (int64, error) {
 	// Validate workflow type exists via engine registry and get initial stateA
 
 	slog.InfoContext(ctx, "Creating workflow", "externalId", req.ExternalID, "businessKey", req.BusinessKey, "workflowType", req.WorkflowType)
@@ -146,7 +146,7 @@ func createWorkflow(ctx context.Context, c *WorkflowsController, req models.Crea
 
 	wfInstance, err := engine.CreateWorkflowInstance(c.WorkflowManager, req.WorkflowType)
 	if err != nil {
-		return err, 0
+		return 0, err
 	}
 	initialState := wfInstance.InitialState()
 
@@ -154,7 +154,7 @@ func createWorkflow(ctx context.Context, c *WorkflowsController, req models.Crea
 	existing, _ := c.WorkflowRepo.FindByExternalId(req.ExternalID)
 	if existing != nil {
 		slog.WarnContext(ctx, "Workflow already exists", "externalId", req.ExternalID)
-		return nil, existing.ID
+		return existing.ID, nil
 	}
 
 	// Serialize state vars
@@ -162,7 +162,7 @@ func createWorkflow(ctx context.Context, c *WorkflowsController, req models.Crea
 	if req.StateVars != nil {
 		b, err := json.Marshal(req.StateVars)
 		if err != nil {
-			return err, 0
+			return 0, err
 		}
 		stateVarsJSON = string(b)
 	}
@@ -200,7 +200,7 @@ func createWorkflow(ctx context.Context, c *WorkflowsController, req models.Crea
 	}
 
 	id, err := c.WorkflowRepo.Save(wf)
-	return err, id
+	return id, err
 }
 
 func (c *WorkflowsController) handleCreateAndWaitWorkflow(w http.ResponseWriter, r *http.Request) {
@@ -230,7 +230,12 @@ func (c *WorkflowsController) handleCreateAndWaitWorkflow(w http.ResponseWriter,
 		req.WaitSeconds = 1
 	}
 
-	err, id := createWorkflow(r.Context(), c, req.CreateWorkflowRequest)
+	id, err := createWorkflow(r.Context(), c, req.CreateWorkflowRequest)
+	if err != nil {
+		slog.Error("Failed to save workflow", "error", err)
+		http.Error(w, "failed to create workflow", http.StatusInternalServerError)
+		return
+	}
 	c.WorkflowManager.Wakeup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(req.WaitSeconds)*time.Second)
@@ -589,11 +594,6 @@ func (c *WorkflowsController) handleUpdateStateVar(w http.ResponseWriter, r *htt
 	_, _ = c.WorkflowActionRepo.Save(&domain.WorkflowAction{WorkflowID: wf.ID, ExecutorID: 0, ExecutionCount: wf.RetryCount, Type: "LOG", Name: wf.State, Text: "Updated state var: " + key, DateTime: time.Now()})
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.UpdateStateVarResponse{OK: true})
-}
-
-func parseInt64(s string) int64 {
-	v, _ := strconv.ParseInt(s, 10, 64)
-	return v
 }
 
 // handleListWorkflowDefinitions returns a list of all workflow definitions

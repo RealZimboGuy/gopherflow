@@ -1,0 +1,41 @@
+version: "2"
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+
+  settings:
+    errcheck:
+      # Close on a reader/rows/connection is conventionally deferred and its
+      # error is not actionable. Everything else must be handled.
+      exclude-functions:
+        - (io.Closer).Close
+        - (io.ReadCloser).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.DB).Close
+        # Encoding the response body happens after WriteHeader has committed the
+        # status, so the error cannot change what the client receives.
+        - (*encoding/json.Encoder).Encode
+
+  exclusions:
+    # Test setup uses os.Setenv, container.Terminate and friends where a failure
+    # surfaces immediately as a failing test, so checking each one adds noise
+    # without adding safety.
+    rules:
+      - path: (_test\.go|^test/)
+        linters:
+          - errcheck
+
+    paths:
+      # Not committed (see .gitignore); present only in local checkouts.
+      - private_settings.go
+
+issues:
+  # Report every occurrence. The defaults cap at 3 issues of the same kind,
+  # which hides work and makes a "clean" local run fail later in CI.
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt

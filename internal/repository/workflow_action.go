@@ -108,11 +108,10 @@ func (r *WorkflowActionRepository) FindAllByWorkflowID(workflowID int64) (*[]dom
 		ORDER BY  id DESC
 	`
 	rows, err := r.db.Query(query, workflowID)
-	defer rows.Close()
-
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	var actions []domain.WorkflowAction
 	for rows.Next() {

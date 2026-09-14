@@ -87,7 +87,7 @@ func TestStartupAppAndCreateWorkflow(t *testing.T) {
 		clock.Sleep(5 * time.Second)
 		slog.Info("Waiting finished")
 
-		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "FINISHED")
+		common.GetWfAndExpectState(t, port, wf, client, "FINISHED")
 
 	})
 }

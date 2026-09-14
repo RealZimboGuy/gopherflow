@@ -52,8 +52,8 @@ func (m *QuickWorkflow) GetRetryConfig() models.RetryConfig {
 
 func (m *QuickWorkflow) StateTransitions() map[string][]string {
 	return map[string][]string{
-		StateInit:      []string{StateGetIpData}, // Init -> StateGetIpData
-		StateGetIpData: []string{StateFinish},    // StateGetIpData -> finish
+		StateInit:      {StateGetIpData}, // Init -> StateGetIpData
+		StateGetIpData: {StateFinish},    // StateGetIpData -> finish
 	}
 }
 func (m *QuickWorkflow) GetAllStates() []models.WorkflowState {

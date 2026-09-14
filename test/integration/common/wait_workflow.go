@@ -42,8 +42,8 @@ func (m *WaitWorkflow) GetRetryConfig() models.RetryConfig {
 
 func (m *WaitWorkflow) StateTransitions() map[string][]string {
 	return map[string][]string{
-		StateInit:      []string{StateGetIpData}, // Init -> StateGetIpData
-		StateGetIpData: []string{StateFinish},    // StateGetIpData -> finish
+		StateInit:      {StateGetIpData}, // Init -> StateGetIpData
+		StateGetIpData: {StateFinish},    // StateGetIpData -> finish
 	}
 }
 func (m *WaitWorkflow) GetAllStates() []models.WorkflowState {

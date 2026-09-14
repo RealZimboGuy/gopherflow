@@ -33,19 +33,6 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Check formatting
-        run: |
-          unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then
-            echo "::error::these files are not gofmt'd:"
-            echo "$unformatted"
-            gofmt -d .
-            exit 1
-          fi
-
-      - name: Vet
-        run: go vet ./...
-
       - name: Build
         run: go build ./...
 

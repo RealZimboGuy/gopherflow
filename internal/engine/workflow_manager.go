@@ -105,7 +105,7 @@ func (wm *WorkflowManager) StartEngine(ctx context.Context, pollInterval time.Du
 	slog.Info("Starting workflow engine", "workers", config.GetSystemSettingInteger(config.ENGINE_EXECUTOR_SIZE), "queue_size", queueSize)
 	for i := 0; i < config.GetSystemSettingInteger(config.ENGINE_EXECUTOR_SIZE); i++ {
 		//create a new context for each worker
-		workerContext := context.WithValue(ctx, "worker_id", i)
+		workerContext := context.WithValue(ctx, core.CtxKeyWorkerId, i)
 		go Worker(workerContext, i, wm.executorID, wm.WorkflowRepo, wm.WorkflowActionRepo, workflowQueue)
 	}
 
@@ -190,7 +190,7 @@ func registerWorkflowDefinitions(ctx context.Context, wm *WorkflowManager) {
 
 		flow := buildFlowChart(wm, name)
 		instance, _ := CreateWorkflowInstance(wm, name)
-		desc := fmt.Sprintf("%s", instance.Description())
+		desc := instance.Description()
 
 		for _, state := range instance.GetAllStates() {
 			if state.StateType == models.StateNormal ||
@@ -264,10 +264,7 @@ func buildFlowChart(wm *WorkflowManager, name string) string {
 	if err != nil {
 		return fmt.Sprintf("flowchart TD\n    %s[Uninitialized]\n", name)
 	}
-	wf, ok := inst.(core.Workflow)
-	if !ok {
-		return fmt.Sprintf("flowchart TD\n    %s[Invalid Workflow]\n", name)
-	}
+	wf := inst
 
 	states := wf.GetAllStates()
 	transitions := wf.StateTransitions()
@@ -278,30 +275,30 @@ func buildFlowChart(wm *WorkflowManager, name string) string {
 	// Build edges based on transitions (one-to-many)
 	for from, tos := range transitions {
 		for _, to := range tos {
-			sb.WriteString(fmt.Sprintf("    %s --> %s\n", from, to))
+			fmt.Fprintf(&sb, "    %s --> %s\n", from, to)
 		}
 	}
 
 	// classDefs
-	sb.WriteString(fmt.Sprintf("    classDef errorClass %s\n", errorClass))
-	sb.WriteString(fmt.Sprintf("    classDef doneClass %s\n", doneClass))
-	sb.WriteString(fmt.Sprintf("    classDef startClass %s\n", startClass))
-	sb.WriteString(fmt.Sprintf("    classDef manualClass %s\n", manualClass))
-	sb.WriteString(fmt.Sprintf("    classDef normalClass %s\n", normalClass))
+	fmt.Fprintf(&sb, "    classDef errorClass %s\n", errorClass)
+	fmt.Fprintf(&sb, "    classDef doneClass %s\n", doneClass)
+	fmt.Fprintf(&sb, "    classDef startClass %s\n", startClass)
+	fmt.Fprintf(&sb, "    classDef manualClass %s\n", manualClass)
+	fmt.Fprintf(&sb, "    classDef normalClass %s\n", normalClass)
 
 	// Assign classes based on state types
 	for _, st := range states {
 		switch st.StateType {
 		case models.StateStart:
-			sb.WriteString(fmt.Sprintf("    class %s startClass;\n", st.Name))
+			fmt.Fprintf(&sb, "    class %s startClass;\n", st.Name)
 		case models.StateEnd:
-			sb.WriteString(fmt.Sprintf("    class %s doneClass;\n", st.Name))
+			fmt.Fprintf(&sb, "    class %s doneClass;\n", st.Name)
 		case models.StateManual:
-			sb.WriteString(fmt.Sprintf("    class %s manualClass;\n", st.Name))
+			fmt.Fprintf(&sb, "    class %s manualClass;\n", st.Name)
 		case models.StateError:
-			sb.WriteString(fmt.Sprintf("    class %s errorClass;\n", st.Name))
+			fmt.Fprintf(&sb, "    class %s errorClass;\n", st.Name)
 		default:
-			sb.WriteString(fmt.Sprintf("    class %s normalClass;\n", st.Name))
+			fmt.Fprintf(&sb, "    class %s normalClass;\n", st.Name)
 		}
 	}
 
@@ -364,7 +361,7 @@ func (wm *WorkflowManager) pollAndRunWorkflows(ctx context.Context) {
 		slog.InfoContext(ctx, "Marking workflow as scheduled for execution", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 		exclusiveLock := wm.WorkflowRepo.MarkWorkflowAsScheduledForExecution(wf.ID, wm.executorID, wf.Modified)
 
-		if exclusiveLock == false {
+		if !exclusiveLock {
 			slog.InfoContext(ctx, "Unable to gain lock on workflow, possibly piced up by other executor", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
 			_, _ = wm.WorkflowActionRepo.Save(&domain.WorkflowAction{WorkflowID: wf.ID, ExecutorID: wm.executorID, ExecutionCount: 1, Type: "LOCK_FAILED", Name: "LOCK_FAILED", Text: "Failed to Acquier a lock on the workflow", DateTime: time.Now()})
 			continue
@@ -375,7 +372,7 @@ func (wm *WorkflowManager) pollAndRunWorkflows(ctx context.Context) {
 		instance, _ := createWorkflow(wm, wf.WorkflowType)
 
 		slog.InfoContext(ctx, "Add workflow to execution channel", "business_key", wf.BusinessKey, "externalId", wf.ExternalID)
-		ptr := instance.(core.Workflow)
+		ptr := instance
 		ptr.Setup(&wf)
 		workflowQueue <- ptr
 
@@ -400,11 +397,7 @@ func CreateWorkflowInstance(wm *WorkflowManager, name string) (core.Workflow, er
 	if err != nil {
 		return nil, err
 	}
-	wf, ok := inst.(core.Workflow)
-	if !ok {
-		return nil, fmt.Errorf("workflow type does not implement engine.Workflow: %s", name)
-	}
-	return wf, nil
+	return inst, nil
 }
 
 func (wm *WorkflowManager) Wakeup() {

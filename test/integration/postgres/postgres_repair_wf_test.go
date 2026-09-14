@@ -101,7 +101,7 @@ func TestStartupAppAndRepairWorkflow(t *testing.T) {
 		clock.Sleep(5 * time.Second)
 		slog.Info("Waiting finished")
 
-		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "EXECUTING")
+		common.GetWfAndExpectState(t, port, wf, client, "EXECUTING")
 
 		//terminate and end the executor
 		// Before shutting down, ensure we're using the right HTTP port
@@ -164,7 +164,7 @@ func TestStartupAppAndRepairWorkflow(t *testing.T) {
 
 		// Verify the workflow is now in finished state
 		slog.Info("Verifying workflow state is now FINISHED")
-		common.GetWfAndExpectState(t, port, url, wf, req, err, client, "FINISHED")
+		common.GetWfAndExpectState(t, port, wf, client, "FINISHED")
 
 		// Clean up resources
 		cancel2()

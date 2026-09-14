@@ -23,11 +23,11 @@ func NewExecutorRepository(db *sql.DB, clock core.Clock) *ExecutorRepository {
 
 func (r *ExecutorRepository) Save(e *domain.Executor) (int64, error) {
 	// Ensure timestamps are set if zero; started defaults to now if unset
-	var started time.Time = e.Started
+	started := e.Started
 	if started.IsZero() {
 		started = r.clock.Now().UTC()
 	}
-	var lastActive time.Time = e.LastActive
+	lastActive := e.LastActive
 	if lastActive.IsZero() {
 		lastActive = started
 	}
