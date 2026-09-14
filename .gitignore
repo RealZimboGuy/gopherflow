@@ -7,3 +7,7 @@ private_settings.go
 *.db
 
 .DS_Store
+
+# Assistant/agent working notes - never part of the repo
+docs/superpowers/
+docs/plans/
