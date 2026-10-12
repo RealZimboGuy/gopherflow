@@ -1,12 +1,12 @@
 #Run with
-#  docker buildx build --platform linux/amd64,linux/arm64 -t juliangpurse/gopherflow:1.9.0 -f Dockerfile.multistage --push .
+#  docker buildx build --platform linux/amd64,linux/arm64 -t juliangpurse/gopherflow:1.9.1 -f Dockerfile.multistage --push .
 #
 # The build stage runs on the builder's own platform and cross-compiles for
 # each target with GOOS/GOARCH. That only works because the binary is pure Go
 # (CGO_ENABLED=0): no C toolchain per architecture, and no Go compiler running
 # under QEMU emulation, which is what makes multi-arch builds slow.
 
- #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v gflow-data:/data juliangpurse/gopherflow:1.9.0
+ #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v gflow-data:/data juliangpurse/gopherflow:1.9.1
  #
  # A named volume inherits /data's ownership from the image. A host bind mount
  # does not: it keeps the host's ownership, which the nonroot user below cannot

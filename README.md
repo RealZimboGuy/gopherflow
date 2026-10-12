@@ -20,7 +20,7 @@
 Write workflows as plain Go structs. Every state transition is persisted to a database you already run — Postgres, MySQL or SQLite — so workflows survive restarts, crashes and deploys, and resume from where they stopped. The engine, the REST API and the web console are a library you import into your own binary: no control-plane cluster, no broker, no sidecar, no separate worker fleet to operate.
 
 ```
-go get github.com/RealZimboGuy/gopherflow@v1.9.0
+go get github.com/RealZimboGuy/gopherflow@v1.9.1
 ```
 
 ## Why GopherFlow
@@ -75,7 +75,7 @@ This starts the demo application with a SQLite database, there are two workflows
         -e GFLOW_DATABASE_TYPE=SQLLITE \
         -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
         -v gflow-data:/data \
-        juliangpurse/gopherflow:1.9.0
+        juliangpurse/gopherflow:1.9.1
 
 Access the web console at http://localhost:8080/
 
@@ -94,7 +94,7 @@ your account is not writable by the container unless you say who to run as:
         -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db \
         -v "$(pwd):/data" \
         --user $(id -u):$(id -g) \
-        juliangpurse/gopherflow:1.9.0
+        juliangpurse/gopherflow:1.9.1
 
 ## Web Console
 
@@ -125,6 +125,26 @@ To use the Postman collection:
 1. Import the collection into Postman
 2. Configure your environment variables (if needed)
 3. Use the pre-configured requests to interact with your GopherFlow instance
+
+### Health check
+
+`GET /healthz` needs no session or API key. It returns `200 {"status":"ok","database":"ok"}`
+when the server is up and the database answers a ping, and `503` otherwise.
+
+Use it as a **readiness** probe, not a liveness probe. It reports on the
+database, and a liveness probe that fails during a database outage makes
+Kubernetes restart every GopherFlow pod, which cannot fix the database.
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+```
+
+GopherFlow registers its routes on Go's global `http.DefaultServeMux`. If your
+own binary also registers `GET /healthz` there, it will panic at startup with a
+duplicate-pattern error; rename yours or serve it from your own `ServeMux`.
 
 
 ### Performance
@@ -173,7 +193,7 @@ refer to the example application:  https://github.com/RealZimboGuy/gopherflow-ex
 
 ### Specific details
 
-    go get github.com/RealZimboGuy/gopherflow@v1.9.0
+    go get github.com/RealZimboGuy/gopherflow@v1.9.1
 
 a struct that extends the base 
 ```go
