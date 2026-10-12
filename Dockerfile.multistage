@@ -1,5 +1,10 @@
 #Run with
-#  docker build --platform linux/amd64 -t juliangpurse/gopherflow:1.9.0 -f Dockerfile.multistage . ; docker push juliangpurse/gopherflow:1.9.0
+#  docker buildx build --platform linux/amd64,linux/arm64 -t juliangpurse/gopherflow:1.9.0 -f Dockerfile.multistage --push .
+#
+# The build stage runs on the builder's own platform and cross-compiles for
+# each target with GOOS/GOARCH. That only works because the binary is pure Go
+# (CGO_ENABLED=0): no C toolchain per architecture, and no Go compiler running
+# under QEMU emulation, which is what makes multi-arch builds slow.
 
  #docker run -p 8080:8080 -e GFLOW_DATABASE_TYPE=SQLLITE -e GFLOW_DATABASE_SQLLITE_FILE_NAME=/data/gflow.db -v gflow-data:/data juliangpurse/gopherflow:1.9.0
  #
@@ -8,7 +13,10 @@
  # write to. Use --user $(id -u):$(id -g) when bind mounting a host directory.
 
 # Build the application from source
-FROM golang:1.26 AS build-stage
+FROM --platform=$BUILDPLATFORM golang:1.26 AS build-stage
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /app
 
@@ -17,14 +25,14 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /gopher-flow cmd/gopherflow/main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -o /gopher-flow cmd/gopherflow/main.go
 
 # Run the tests in the container
 FROM build-stage AS run-test-stage
 RUN go test -v ./...
 
 # Prepare a writable data directory
-FROM busybox AS data-stage
+FROM --platform=$BUILDPLATFORM busybox AS data-stage
 RUN mkdir -p /data
 
 # Deploy the application binary into a lean image

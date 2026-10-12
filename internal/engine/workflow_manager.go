@@ -2,6 +2,8 @@ package engine
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -183,8 +185,11 @@ func registerWorkflowDefinitions(ctx context.Context, wm *WorkflowManager) {
 	for name := range *wm.WorkflowRegistry {
 		def, err := wm.DefinitionRepo.FindByName(name)
 		if err != nil {
-			// If not found, we'll create it; for other errors, log and continue
-			slog.WarnContext(ctx, "Workflow definition lookup error, will attempt create", "name", name, "error", err)
+			// Not found is the normal first-start path: the definition is
+			// created below. Only a genuine lookup failure is worth a warning.
+			if !errors.Is(err, sql.ErrNoRows) {
+				slog.WarnContext(ctx, "Workflow definition lookup failed, will attempt create", "name", name, "error", err)
+			}
 			def = nil
 		}
 
