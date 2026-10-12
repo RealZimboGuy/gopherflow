@@ -15,6 +15,8 @@
   <img src="screenshots/executed-path.gif" alt="A workflow advancing through its states, with the executed path highlighted on the generated diagram" height="380">
 </p>
 
+<p align="center"><em>The diagram is generated from the workflow definition. Blue marks the path this run actually took.</em></p>
+
 Write workflows as plain Go structs. Every state transition is persisted to a database you already run — Postgres, MySQL or SQLite — so workflows survive restarts, crashes and deploys, and resume from where they stopped. The engine, the REST API and the web console are a library you import into your own binary: no control-plane cluster, no broker, no sidecar, no separate worker fleet to operate.
 
 ```
@@ -38,7 +40,7 @@ go get github.com/RealZimboGuy/gopherflow@v1.9.0
 | Web console                 | built in                    | built in (separate UI service)                                                | built in                      | you build it              |
 | Parent / child, parallel fan-out | yes                    | yes, plus signals, queries, timers, sagas                                     | DAG deps and nested DAGs      | you build it              |
 | What you have to learn      | one Go interface            | determinism, versioning, task queues                                          | the YAML schema               | nothing, until it grows   |
-| Scale ceiling               | thousands of workflows/min against one DB | very high, multi-cluster                                        | single-node scheduler         | whatever you build        |
+| Scale ceiling               | ~19k workflows/min on one laptop + SQLite ([measured](#performance)) | very high, multi-cluster                                        | single-node scheduler         | whatever you build        |
 
 Choose **Temporal** if you need signals and queries, workers in several languages, or scale that outgrows a single database. Choose **Dagu** if your steps are shell commands on a schedule rather than Go code. Choose **GopherFlow** if you want durable, retryable, observable business workflows written in Go — without operating another distributed system to get them.
 
@@ -97,9 +99,9 @@ your account is not writable by the container unless you say who to run as:
 ## Web Console
 
 <p align="center">
-<img src="screenshots/dashboard_view.png" alt="GopherFlow" style="max-width:300px;">
-<img src="screenshots/workflow_view.png" alt="GopherFlow" style="max-width:300px;">
-<img src="screenshots/definition.png" alt="GopherFlow" style="max-width:300px;">
+<img src="screenshots/dashboard_view.png" alt="Dashboard: workflow counts by type and status" width="32%">
+<img src="screenshots/workflow_view.png" alt="A single workflow with its action history" width="32%">
+<img src="screenshots/definition.png" alt="A workflow definition rendered as a flow diagram" width="32%">
 </p>
 
 ## REST API
@@ -126,14 +128,44 @@ To use the Postman collection:
 
 
 ### Performance
-* Tested to a few thousand simple workflows per minute with the concurrent workers increased, see system settings (ENGINE_CHECK_DB_INTERVAL, ENGINE_BATCH_SIZE and ENGINE_EXECUTOR_SIZE )
-* Something to note, there are no official records of this to put on the repo.... why:
-    * at a certain point if you need raw throughput, you dont need a workflow engine and will hand tool the code.
-    * if you are chasing performance to that level, the convenience of a framework like GopherFlow is not worth it.
-    * if you have complicated Directed Acyclic Graphs (DAGs) you will most likely need a workflow engine, in that case your executions per minute is more limited by external factors like APIs you are calling, database performance, etc.
-    * having a workflow engine gives a single place for workflows to live and makes the trivial things like persistence, retry and observability easier.
-* these are mostly the rants of the developer :) take it with some salt.
 
+Measured on an 8-core Apple M3 (16 GB, macOS 26.6, Go 1.26) against SQLite in
+WAL mode, pushing 20,000 three-state workflows through a single process with
+32 executors and a batch size of 200:
+
+| | |
+| --- | --- |
+| Workflows completed | 20,000 |
+| State transitions | 140,000 |
+| Wall time | 63.3 s |
+| **Throughput** | **~19,000 workflows/min** (316/sec) |
+| | **~2,200 state transitions/sec** |
+
+Every state transition is a state function call plus a workflow row update plus
+an action-history insert, so transitions/sec is the honest unit of work —
+workflows/min just happens to be the number people ask for. Smaller batches run
+faster per workflow (~37,000 workflows/min at 5,000 workflows) because the
+tables are still small; the figure above is the sustained one.
+
+Reproduce it yourself:
+
+```
+GFLOW_BENCH=1 GFLOW_BENCH_WORKFLOWS=20000 go test ./test/benchmark/ -run TestThroughput -v -timeout 20m
+```
+
+The harness is [`test/benchmark/throughput_test.go`](test/benchmark/throughput_test.go).
+It is skipped unless `GFLOW_BENCH` is set, and it measures execution only — the
+seed inserts happen before the clock starts.
+
+Tune with `GFLOW_ENGINE_EXECUTOR_SIZE`, `GFLOW_ENGINE_BATCH_SIZE` and
+`GFLOW_ENGINE_CHECK_DB_INTERVAL`. Postgres will take you further than SQLite on
+concurrent writes; SQLite is the easy default, not the ceiling.
+
+A caveat worth stating plainly: if you need far more throughput than this, you
+probably do not want a workflow engine at all — you want hand-written code and
+a queue. GopherFlow is for workflows whose rate is set by the APIs and humans
+they wait on, where what you actually want is persistence, retry and a console
+to see what happened.
 
 ## Building your own Workflow and running it
 
