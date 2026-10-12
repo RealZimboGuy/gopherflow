@@ -1,5 +1,6 @@
 #Run with
-#  docker buildx build --platform linux/amd64,linux/arm64 -t juliangpurse/gopherflow:1.9.1 -f Dockerfile.multistage --push .
+#  just build   (creates a docker-container buildx builder on first use, then:)
+#  docker buildx build --builder gopherflow-builder --platform linux/amd64,linux/arm64 -t juliangpurse/gopherflow:1.9.1 -f Dockerfile.multistage --push .
 #
 # The build stage runs on the builder's own platform and cross-compiles for
 # each target with GOOS/GOARCH. That only works because the binary is pure Go

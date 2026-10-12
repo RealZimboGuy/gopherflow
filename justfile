@@ -16,8 +16,11 @@ update-version:
 
 # Builds amd64 and arm64 in one manifest and pushes it. buildx --push is
 # required: a multi-platform image cannot be loaded into the local daemon.
+# Docker's default builder cannot build multi-platform images, so this uses a
+# docker-container builder, created on first use. It is not made the default.
 build: update-version
-  docker buildx build --platform linux/amd64,linux/arm64 -t juliangpurse/gopherflow:{{VERSION}} -f Dockerfile.multistage --push .
+  docker buildx inspect gopherflow-builder >/dev/null 2>&1 || docker buildx create --name gopherflow-builder --driver docker-container --bootstrap
+  docker buildx build --builder gopherflow-builder --platform linux/amd64,linux/arm64 -t juliangpurse/gopherflow:{{VERSION}} -f Dockerfile.multistage --push .
 
 git:
     git tag v{{VERSION}}
