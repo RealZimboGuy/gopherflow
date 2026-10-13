@@ -1,0 +1,42 @@
+# Postgres-backed quickstart for the GopherFlow demo console.
+#
+#   docker compose up
+#
+# Then open http://localhost:8080/ and log in with admin / admin.
+#
+# The env vars are spelled out (rather than hidden in an .env file) because
+# this file doubles as documentation of the GFLOW_DATABASE_* settings — see
+# internal/config/system_settings.go.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: gopherflow
+      POSTGRES_PASSWORD: gopherflow
+      POSTGRES_DB: gopherflow
+    volumes:
+      # Named volume so the data survives `docker compose down` and container
+      # replacement; remove it with `docker volume rm gopherflow_gopherflow-postgres`.
+      - gopherflow-postgres:/var/lib/postgresql/data
+    healthcheck:
+      # GopherFlow must not race the database: it runs migrations on start,
+      # so we gate it on Postgres actually accepting connections.
+      test: ["CMD-SHELL", "pg_isready -U gopherflow -d gopherflow"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  gopherflow:
+    image: juliangpurse/gopherflow:1.9.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      GFLOW_DATABASE_TYPE: POSTGRES
+      GFLOW_DATABASE_URL: postgres://gopherflow:gopherflow@postgres:5432/gopherflow?sslmode=disable
+      GFLOW_ENGINE_SERVER_WEB_PORT: "8080"
+
+volumes:
+  gopherflow-postgres:

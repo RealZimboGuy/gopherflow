@@ -96,6 +96,21 @@ your account is not writable by the container unless you say who to run as:
         --user $(id -u):$(id -g) \
         juliangpurse/gopherflow:1.9.1
 
+### Postgres quickstart (docker compose)
+
+SQLite serialises writes, so Postgres takes you further on concurrent
+executions. The `docker-compose.yml` at the repo root brings up Postgres and
+the demo image wired together:
+
+        docker compose up
+
+That gives you a working console at http://localhost:8080/ (admin / admin)
+with a real database behind it. Migrations run automatically on start —
+there is no init step. The compose file spells out the `GFLOW_DATABASE_*`
+environment variables rather than hiding them in an `.env`, so it doubles as
+documentation of how to configure a database connection. Postgres data lives
+in the named volume `gopherflow-postgres`.
+
 ## Web Console
 
 <p align="center">
